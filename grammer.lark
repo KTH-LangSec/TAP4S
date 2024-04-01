@@ -1,0 +1,127 @@
+%import common.WS
+%import common.CNAME
+%import common.NUMBER
+
+
+OPERATOR: "+" | "-" | "&&" | "||" | "==" | "!=" | ">" | "<" | ">=" | "<=" 
+UOPERATOR: "!"
+
+IN: "in"
+OUT: "out"
+INOUT: "inout"
+
+TRUE: "true"
+FALSE: "false" 
+
+start: block
+
+block: statement+
+
+?statement: assignment 
+          | header_definition 
+          | struct_definition
+          | variable_declaration 
+          | type_definition 
+          | constant
+          | function_definition 
+          | controlblock_definition
+          | action_definition
+          | apply
+          | table_definition
+          | parser_definition
+          | state_definition
+          | transition
+          | if_statement
+          | call
+          | main
+
+main: IDENTIFIER "(" main_body ")" "main" ";"
+main_body: _seperated{main_body_call, ","}
+main_body_call: IDENTIFIER ( "(" arguments ")" | "(" ")" )
+
+assignment: lval "=" expression ";"
+
+variable_declaration: ttype lval_var ";"
+
+header_definition: "header" IDENTIFIER "{" field_declarations "}"
+struct_definition: "struct" IDENTIFIER "{" field_declarations "}"
+field_declarations: field_declaration+
+field_declaration: ttype IDENTIFIER ";"
+
+if_statement: "if" ( "(" expression ")" | expression ) "{" block "}" ("else" "{" block "}")?
+
+call: IDENTIFIER ( "(" arguments ")" | "(" ")" ) ";"
+arguments: _seperated{expression, ","}
+
+function_definition: ttype IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
+controlblock_definition: "control" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
+action_definition: "action" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
+
+parameters: _seperated{parameter, ","}
+parameter: [direction] ttype IDENTIFIER
+direction: IN | OUT | INOUT
+
+apply: "apply" IDENTIFIER ( keys | "[" "]" ) ";"
+keys: "[" _seperated{expression, ","} "]"
+
+table_definition: "table" IDENTIFIER "{" table_keys_definition table_actions_definition (table_size_definition)? (table_default_definition)? "}"
+table_keys_definition: "key" "=" "{" key_definition* "}"
+key_definition: expression ":" IDENTIFIER ";"
+table_actions_definition: "actions" "=" "{" (IDENTIFIER ";")* "}"
+table_size_definition: "size" "=" NUMBER ";"
+table_default_definition: "default_action" "=" IDENTIFIER ("(" ")")? ";"
+
+
+parser_definition: "parser" IDENTIFIER "(" "packet_in" IDENTIFIER "," parameters ")" "{" block "}"
+state_definition: "state" IDENTIFIER "{" block "}"
+
+transition: "transition" "select"  "(" (expression)? ")" "{" value_states default_state "}"
+value_states: value_state*
+value_state: IDENTIFIER ":" IDENTIFIER ";"
+default_state: "default" ":" IDENTIFIER ";"
+
+expression: binary_operation
+    | unary_operation
+    | hex_value
+    | unsigned
+    | boolean_value
+    | lval
+    | "(" expression ")"
+
+// access: IDENTIFIER ("." IDENTIFIER)+
+// slicing: expression "[" NUMBER ":" NUMBER "]"
+binary_operation: expression OPERATOR expression
+unary_operation: UOPERATOR expression
+
+hex_value: NUMBER "x" /[0-9a-fA-F]+/ | NUMBER "X" /[0-9a-fA-F]+/
+unsigned: NUMBER "w" NUMBER
+boolean_value: FALSE | TRUE
+
+ttype: primitive_type | IDENTIFIER
+
+primitive_type: bit_string_prim | boolean_prim
+bit_string_prim: "bit" "<" NUMBER ">"
+boolean_prim: "bool"
+
+type_definition: "typedef" primitive_type IDENTIFIER ";"
+constant: "const" ttype lval_var "=" expression ";" 
+
+lval: lval_var
+    | lval_access
+    | lval_slicing
+lval_var: IDENTIFIER
+lval_access: IDENTIFIER ("." IDENTIFIER)+
+lval_slicing: lval "[" NUMBER ":" NUMBER "]"
+
+
+
+_seperated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
+IDENTIFIER: CNAME
+
+SINGLE_COMMENT: /\/\/[^\n]*/
+COMMENT_START: "/*"
+COMMENT_END: "*/"
+COMMENT_CONTENT: /(.|\n)+?/
+COMMENT: COMMENT_START COMMENT_CONTENT COMMENT_END | SINGLE_COMMENT
+%ignore COMMENT
+%ignore WS
