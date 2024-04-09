@@ -1,17 +1,8 @@
 import type_system_lib.types as TYPE
 import type_system_lib.interval as INTERVAL
 import type_system_lib.label as LATIICE
-import helper_functions as HELPER
+import logger as LOGGER
 import parser_lib.ast as AST
-
-#######################################################################################
-def pre_proccess(_ast):
-    for stm in _ast:
-        if (stm.get_node_type() == AST.StatementsEnum.PARSER_DEFINITION):
-            packet_in = stm.get_packet_in()
-            return packet_in
-
-    return None
 
 #######################################################################################
 def process_input_policy(_input_policy):
@@ -26,10 +17,10 @@ def process_input_policy(_input_policy):
         for slc in slices:
             tuples = [s.strip() for s in slc.split("->") if s]
             start, end = process_indices(tuples[0])
-            interval, label = process_type(tuples[1], int(end - start))
+            slice_size = int(end - start) + 1
+            interval, label = process_type(tuples[1], slice_size)
 
-            if (end >= type_size):
-                type_size = end
+            type_size += slice_size
 
             type_slices.append(TYPE.Slice(start, end, interval, label))
 
@@ -64,7 +55,7 @@ def process_type(_types, _size):
             label = LATIICE.Low()
         
     else:
-        HELPER.error("Cannot parse the policy")
+        LOGGER.error("Cannot parse the policy")
         return (None, None)
 
     return (interval, label)

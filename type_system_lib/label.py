@@ -1,4 +1,4 @@
-import helper_functions as HELPER
+import logger as LOGGER
 
 class Lattice():
     def __init__(self):
@@ -12,6 +12,11 @@ class Low(Lattice):
 
     def get_val(self):
         return self.val
+    
+    def is_high(self):
+        return False
+    def is_low(self):
+        return True
 
     def __str__(self):
         return "LOW"
@@ -23,6 +28,11 @@ class High(Lattice):
 
     def get_val(self):
         return self.val
+
+    def is_high(self):
+        return True
+    def is_low(self):
+        return False
 
     def __str__(self):
         return "HIGH"
@@ -37,7 +47,7 @@ def lup(*args):
         if issubclass(type(lbl), Lattice):
             result += lbl.get_val()
         else:
-            HELPER.error(str(lbl) + " is not a lattice lable")
+            LOGGER.error(str(lbl) + " is not a lattice lable")
     
     if (result == 0):
         return Low()

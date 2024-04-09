@@ -15,7 +15,7 @@ FALSE: "false"
 
 start: block
 
-block: statement+
+block: (statement | apply)+
 
 ?statement: assignment 
           | header_definition 
@@ -26,7 +26,6 @@ block: statement+
           | function_definition 
           | controlblock_definition
           | action_definition
-          | apply
           | table_definition
           | parser_definition
           | state_definition
@@ -45,7 +44,7 @@ variable_declaration: ttype lval_var ";"
 
 header_definition: "header" IDENTIFIER "{" field_declarations "}"
 struct_definition: "struct" IDENTIFIER "{" field_declarations "}"
-field_declarations: field_declaration+
+field_declarations: field_declaration*
 field_declaration: ttype IDENTIFIER ";"
 
 if_statement: "if" ( "(" expression ")" | expression ) "{" block "}" ("else" "{" block "}")?
@@ -54,15 +53,20 @@ call: IDENTIFIER ( "(" arguments ")" | "(" ")" ) ";"
 arguments: _seperated{expression, ","}
 
 function_definition: ttype IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
-controlblock_definition: "control" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
 action_definition: "action" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
+
+controlblock_definition: "control" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" controlblock_body "}"
+controlblock_body: statement* apply_block_definition
+apply_block_definition: "apply" "{" block? "}"
+
+apply: "apply" "." IDENTIFIER ( keys | "[" "]" ) ";"
+keys: "[" _seperated{expression, ","} "]"
 
 parameters: _seperated{parameter, ","}
 parameter: [direction] ttype IDENTIFIER
 direction: IN | OUT | INOUT
 
-apply: "apply" IDENTIFIER ( keys | "[" "]" ) ";"
-keys: "[" _seperated{expression, ","} "]"
+
 
 table_definition: "table" IDENTIFIER "{" table_keys_definition table_actions_definition (table_size_definition)? (table_default_definition)? "}"
 table_keys_definition: "key" "=" "{" key_definition* "}"
@@ -77,7 +81,7 @@ state_definition: "state" IDENTIFIER "{" block "}"
 
 transition: "transition" "select"  "(" (expression)? ")" "{" value_states default_state "}"
 value_states: value_state*
-value_state: IDENTIFIER ":" IDENTIFIER ";"
+value_state: (hex_value | unsigned | boolean_value) ":" IDENTIFIER ";"
 default_state: "default" ":" IDENTIFIER ";"
 
 expression: binary_operation

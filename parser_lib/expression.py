@@ -1,6 +1,9 @@
 from enum import Enum
 from copy import copy
 
+import parser_lib.lval as LVAL
+import logger as LOGGER
+
 class ExpressionEnum(Enum):
     HEX = 1
     IDENTIFIER = 2
@@ -35,6 +38,9 @@ class Hex(Expression):
     def get_size(self):
         return self.size
 
+    def get_variables(self):
+        return []
+
     def __str__(self):
         return str(self.value)
 
@@ -50,6 +56,9 @@ class UnsignedNumber(Expression):
     def get_size(self):
         return self.size
 
+    def get_variables(self):
+        return []
+
     def __str__(self):
         return str(self.size) + "w" + str(self.value)
 
@@ -64,6 +73,9 @@ class Boolean(Expression):
         return self.value
     def get_size(self):
         return self.size
+
+    def get_variables(self):
+        return []
 
     def __str__(self):
         return str(self.value)
@@ -82,6 +94,18 @@ class BinaryOP(Expression):
     def get_rhs(self):
         return self.rhs
 
+    def get_variables(self):
+        return self.lhs.get_variables() + self.rhs.get_variables()
+
+    def is_simple(self):
+        lhs_type = self.lhs.get_type() 
+        lhs_b = False or (lhs_type == ExpressionEnum.BOOLEAN) or (lhs_type == ExpressionEnum.UNSIGNED) or (lhs_type == ExpressionEnum.HEX) or (lhs_type == LVAL.LvalEnum.ACCESS) or (lhs_type == LVAL.LvalEnum.SLICE) or (lhs_type == LVAL.LvalEnum.VARIABLE) 
+
+        rhs_type = self.rhs.get_type()
+        rhs_b = False or (rhs_type == ExpressionEnum.BOOLEAN) or (rhs_type == ExpressionEnum.UNSIGNED) or (rhs_type == ExpressionEnum.HEX) or (rhs_type == LVAL.LvalEnum.ACCESS) or (rhs_type == LVAL.LvalEnum.SLICE) or (rhs_type == LVAL.LvalEnum.VARIABLE) 
+
+        return lhs_b and rhs_b
+
     def __str__(self):
         return "( " + str(self.lhs) + " " + str(self.op) + " " + str(self.rhs) + " )"
 
@@ -97,6 +121,9 @@ class UnaryOP(Expression):
     def get_rhs(self):
         return self.rhs
 
+    def get_variables(self):
+        return self.rhs.get_variables()
+
     def __str__(self):
         return "( " + str(self.op) + " " + str(self.rhs) + " )"
 
@@ -105,22 +132,47 @@ class UnaryOP(Expression):
 ################################################################
 ################################################################
 def negate(_exp):
-    if (_exp.get_type() == ExpressionEnum.BINARY):
-        rhs = copy(_exp.get_rhs())
-        lhs = copy(_exp.get_lhs())
-        match _exp.get_op():
-            case "==":
-                op = "!="
-            case "!=":
-                op = "=="
-            case "<":
-                op = ">"
-            case ">":
-                op = "<"
-            case "<=":
-                op = ">="
-            case ">=":
-                op = "<="
-        return BinaryOP(lhs, op, rhs)
-    if (_exp.get_type() == ExpressionEnum.UNARY):
-        return copy(_exp)
+    match _exp.get_type():
+        case ExpressionEnum.BINARY:
+            rhs = copy(_exp.get_rhs())
+            lhs = copy(_exp.get_lhs())
+            match _exp.get_op():
+                case "==":
+                    return BinaryOP(lhs, "!=", rhs)
+                case "!=":
+                    return BinaryOP(lhs, "==", rhs)
+                case "<":
+                    return BinaryOP(lhs, ">=", rhs)
+                case ">":
+                    return BinaryOP(lhs, "<=", rhs)
+                case "<=":
+                    return BinaryOP(lhs, ">", rhs)
+                case ">=":
+                    return BinaryOP(lhs, "<", rhs)
+                case "&&":
+                    return BinaryOP(negate(lhs), "||", negate(rhs))
+                case "||":
+                    return BinaryOP(negate(lhs), "&&", negate(rhs))
+        
+        case ExpressionEnum.UNARY:
+            return copy(_exp.get_rhs())
+
+        case ExpressionEnum.BOOLEAN:
+            if (_exp.get_value()):
+                return Boolean(False)
+            else:
+                return Boolean(True)
+
+        case LVAL.LvalEnum.VARIABLE:
+            return UnaryOP("!", _exp)
+
+        case LVAL.LvalEnum.ACCESS:
+            return UnaryOP("!", _exp)
+            # TODO implement
+            # LOGGER.error("negating access is not implemented!")
+
+        case LVAL.LvalEnum.SLICE:
+            # TODO implement
+            LOGGER.error("negating slice is not implemented!")
+
+

@@ -1,0 +1,77 @@
+%import common.WS
+%import common.CNAME
+%import common.NUMBER
+
+start: contract
+
+contract: (table_contract | extern_contract)*
+
+//table contract//
+table_contract: "table" IDENTIFIER ":" predicate_action_type_set
+predicate_action_type_set: predicate_action_type+
+predicate_action_type: predicate "->" IDENTIFIER "," lval_type_set
+
+
+//extern contract//
+extern_contract: "extern" IDENTIFIER ":" predicate_type_set
+predicate_type_set: predicate_type+
+predicate_type: predicate "->" lval_type_set
+
+
+lval_type_set: "(" _seperated{lval_type, ","} ")" | "(" ")"
+lval_type: lval ":" type
+
+//----- types -----//
+type: bit_string_type
+
+// bs
+bit_string_type: "<" "bs" "[" NUMBER "]" "," "{" slices "}" ">"
+slices: _seperated{slice, ","}
+_seperated{x, sep}: x (sep x)*
+slice: "(" indices ")" "->" "(" "[" interval "]" "," label ")"
+label: LOW | HIGH
+interval: "*" | NUMBER "," NUMBER
+indices: NUMBER "," NUMBER
+
+//TODO bool
+//TODO struct
+//TODO header
+
+//---- predicate ----//
+OPERATOR: "&&" | "||" | "==" | "!=" | ">" | "<" | ">=" | "<="
+predicate: binary_operation
+    | hex_value
+    | unsigned
+    | boolean_value
+    | lval
+    | "(" predicate ")"
+
+binary_operation: predicate OPERATOR predicate
+hex_value: NUMBER "x" /[0-9a-fA-F]+/ | NUMBER "X" /[0-9a-fA-F]+/
+unsigned: NUMBER "w" NUMBER
+boolean_value: FALSE | TRUE
+
+lval: lval_var
+    | lval_access
+    | lval_slicing
+lval_var: IDENTIFIER
+lval_access: IDENTIFIER ("." IDENTIFIER)+
+lval_slicing: lval "[" NUMBER ":" NUMBER "]"
+
+
+
+//---- definitions ----//
+IDENTIFIER: CNAME
+LOW: "low" | "Low"
+HIGH: "high" | "High"
+TRUE: "true"
+FALSE: "false" 
+
+
+SINGLE_COMMENT: /\/\/[^\n]*/
+COMMENT_START: "/*"
+COMMENT_END: "*/"
+COMMENT_CONTENT: /(.|\n)+?/
+COMMENT: COMMENT_START COMMENT_CONTENT COMMENT_END | SINGLE_COMMENT
+%ignore COMMENT
+%ignore WS

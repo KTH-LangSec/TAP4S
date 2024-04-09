@@ -13,6 +13,9 @@ class Lval():
     def get_type(self):
         return self.type
 
+    def get_variables(self):
+        return [self]
+
     def __str__(self):
         return "< lval >"
 

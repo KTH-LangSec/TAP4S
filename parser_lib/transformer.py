@@ -90,7 +90,13 @@ class P4Transformer(Transformer):
         arguments = None
         if len(args) > 1:
             arguments = args[1]
-        return ast.Call(name, arguments)
+        match name.lower():
+            case "extract":
+                return ast.Extract(arguments)
+            case "emit":
+                return ast.Emit(arguments)
+            case _:
+                return ast.Call(name, arguments)
 
     def arguments(self, *args):
         return list(args)
@@ -115,7 +121,7 @@ class P4Transformer(Transformer):
         return ast.Transition(exp, def_state, val_states)
 
     def value_state(self, *args):
-        return {"value":args[0], "state":args[1]}
+        return ast.ValueState(args[0], args[1])
 
     def value_states(self, *args):
         return list(args)
@@ -194,19 +200,6 @@ class P4Transformer(Transformer):
         return ast.FunctionDefinition(name, ret_type, parameters, body)
         #return {"stm_type" : "function_def", "name": name, "return_type": ret_type , "parameters": parameters , "body" : body}
 
-    def controlblock_definition(self, *args):
-        if len(args) == 2:
-            name = args[0]
-            parameters = None;
-            body = args[1]
-        else:
-            name = args[0]
-            parameters = args[1]
-            body = args[2]
-        return ast.ControlBlcokDefinition(name, parameters, body)
-        #return {"stm_type" : "controlblock_definition", "name": name, "parameters": parameters , "body" : body}
-
-
     def action_definition(self, *args):
         if len(args) == 2:
             name = args[0]
@@ -219,16 +212,16 @@ class P4Transformer(Transformer):
         return ast.ActionDefinition(name, parameters, body)
         #return {"stm_type" : "action_definition", "name": name, "parameters": parameters , "body" : body}
 
-
+    ###################################
     def parser_definition(self, *args):
         name = args[0]
-        packetin = lval.Variable(args[1])
+        packetin = identifiers.Parameter("inout", "packet_in", args[1])
         if len(args[2]) == 1:
             header = args[2][0]
             parameters = None
         else:
             header = args[2][0]
-            parameters = args[2][1:]
+            parameters = list(args[2][1:])
         body = args[3]
         return ast.ParserDefinition(name, packetin, header, parameters, body)
         #return {"stm_type" : "parser_definition", "name": name, "packet_in": packetin , "header": header, "parameters": parameters , "body" : body}
@@ -240,7 +233,50 @@ class P4Transformer(Transformer):
         return ast.StateDefinition(name, body)
         #return {"stm_type" : "state_definition", "name": name, "body" : body}
 
+    #########################################
+    def controlblock_definition(self, *args):
+        if len(args) == 2:
+            name = args[0]
+            parameters = None;
+            body, apply_block = args[1]
+        else:
+            name = args[0]
+            parameters = args[1]
+            body, apply_block = args[2]
 
+        return ast.ControlBlcokDefinition(name, parameters, apply_block, body)
+
+
+    def controlblock_body(self, *args):
+        body = []
+        apply_block = None
+        for arg in args:
+            match arg.get_node_type():
+                case ast.StatementsEnum.APPLY_BLOCK_DEFINITION:
+                    apply_block = arg
+                case _:
+                    body.append(arg)
+
+        if len(body) == 0:
+            body = None
+        
+        return (body, apply_block)
+
+    def apply_block_definition(self, *args):
+        if (len(args) == 0):
+            body = None
+        else:
+            body = args[0]
+        return ast.ApplyBlcokDefinition(body)
+
+    def apply_block_body(self, *args):
+        if (len(args) == 0):
+            body = None
+        else:
+            body = list(args)
+        return body
+
+    #################################
     def table_definition(self, *args):
         if len(args) == 3:
             name = args[0]

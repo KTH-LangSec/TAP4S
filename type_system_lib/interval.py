@@ -5,6 +5,8 @@ class Interval():
         self.min = _low
         self.max = _high
 
+        # TODO: adjust everytime after creation?
+
     def get_min(self):
         return self.min
     
@@ -18,7 +20,7 @@ class Interval():
         return (self.min == 0) and (self.max == 0)
 
     def adjust(self, _size):
-        if (self.max > (2 ** _size) - 1):
+        if (self.max > (2 ** _size) - 1): # TODO, more over flow by overapproximation
             self.max = (2 ** _size) - 1
         if (self.min > self.max):
             self.min = self.max
@@ -104,7 +106,7 @@ def less_equal_operation(_lhs_interval, _rhs_interval):
     less_op = less_operation(_lhs_interval, _rhs_interval)
     equal_op = equal_operation(_lhs_interval, _rhs_interval)
 
-    if (less_op.is_true() or (equal_op.is_true)):
+    if (less_op.is_true() or equal_op.is_true()):
         return Interval(1, 1)
     elif (less_op.is_false() and equal_op.is_false()):
         return Interval(0, 0)
@@ -116,7 +118,7 @@ def bigger_equal_operation(_lhs_interval, _rhs_interval):
     bigger_op = bigger_operation(_lhs_interval, _rhs_interval)
     equal_op = equal_operation(_lhs_interval, _rhs_interval)
 
-    if (bigger_op.is_true() or (equal_op.is_true)):
+    if (bigger_op.is_true() or equal_op.is_true()):
         return Interval(1, 1)
     elif (bigger_op.is_false() and equal_op.is_false()):
         return Interval(0, 0)

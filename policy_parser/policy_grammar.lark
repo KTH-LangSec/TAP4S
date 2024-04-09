@@ -1,0 +1,36 @@
+%import common.WS
+%import common.CNAME
+%import common.NUMBER
+
+start: policy
+
+policy: policy_disj ("|" policy_disj)*
+
+policy_disj: lval_policy+
+
+lval_policy: IDENTIFIER ":" slices
+
+
+slices: slice+
+slice: "(" indices ")" "->" "(" "[" interval "]" "," label ")" ";"
+label: LOW | HIGH
+interval: "*" | NUMBER "," NUMBER
+indices: NUMBER "," NUMBER
+
+IDENTIFIER: CNAME
+LOW: "low" | "Low"
+HIGH: "high" | "High"
+
+
+
+
+
+
+
+SINGLE_COMMENT: /\/\/[^\n]*/
+COMMENT_START: "/*"
+COMMENT_END: "*/"
+COMMENT_CONTENT: /(.|\n)+?/
+COMMENT: COMMENT_START COMMENT_CONTENT COMMENT_END | SINGLE_COMMENT
+%ignore COMMENT
+%ignore WS
