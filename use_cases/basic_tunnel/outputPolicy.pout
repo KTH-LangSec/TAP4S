@@ -1,0 +1,37 @@
+standard_metadata:
+(0, 8) -> ([*], low);     /* egress_spec */
+
+packet_out:
+(0, 47) -> ([*], low);      /* dstAddr */
+(48, 95) -> ([*], low);     /* srcAddr */
+(96, 111) -> ([*], low);    /* etherType */
+(112, 275) -> ([*], low)  /* rest of the packet */
+(276, 283) -> ([198,198] , low) /* first 8 bits of dstAddr */
+(284, 307) -> ([*] , low) /* rest of dstAddr */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], high);     /* egress_spec */
+
+packet_out:
+(0, 47) -> ([*], high);      /* dstAddr */
+(48, 95) -> ([*], high);     /* srcAddr */
+(96, 111) -> ([*], high);    /* etherType */
+(112, 275) -> ([*], high)  /* rest of the packet */
+(276, 283) -> ([0,197] , high) /* first 8 bits of dstAddr */
+(284, 307) -> ([*] , high) /* rest of dstAddr */
+
+| 
+
+standard_metadata:
+(0, 8) -> ([*], high);     /* egress_spec */
+
+packet_out:
+(0, 47) -> ([*], high);      /* dstAddr */
+(48, 95) -> ([*], high);     /* srcAddr */
+(96, 111) -> ([*], high);    /* etherType */
+(112, 275) -> ([*], high)  /* rest of the packet */
+(276, 283) -> ([199,255] , high) /* first 8 bits of dstAddr */
+(284, 307) -> ([*] , high) /* rest of dstAddr */
+

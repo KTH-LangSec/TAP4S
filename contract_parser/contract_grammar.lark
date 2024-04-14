@@ -33,7 +33,9 @@ label: LOW | HIGH
 interval: "*" | NUMBER "," NUMBER
 indices: NUMBER "," NUMBER
 
-//TODO bool
+// bool
+bool_type = "<" "bool" "," "[" NUMBER "," NUMBER "]" "," label ">"
+
 //TODO struct
 //TODO header
 

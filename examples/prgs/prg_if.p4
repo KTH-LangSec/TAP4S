@@ -4,13 +4,14 @@ bit<4> y;
 
 if (x == true)
 {
+    bool w;
     if (z == true)
     {
-        y = 4w1;
+        w = 4w1;
     }
     else
     {
-        y = 4w2;
+        w = 4w2;
     }
 }
 else

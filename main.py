@@ -54,7 +54,7 @@ if __name__ == '__main__':
     ################## Policy ###################
     #############################################
     if args.p:
-        with open(args.pin, 'r') as file:
+        with open(args.p, 'r') as file:
             file_contents = file.read()
         policy_in_list = POLICIY.parse(file_contents)
     else:
@@ -96,12 +96,12 @@ if __name__ == '__main__':
 
             for lval_policy in policy.get_lval_policies():
                 lval = lval_policy.get_lval()
-                current_type = gamma_tmp.get(lval)
-                if (current_type != None):
+                if (gamma_tmp.exists(lval)):
+                    current_type = gamma_tmp.get(lval)
                     match current_type.get_type():
                         case TYPE.TypesEnum.BIT_STRING:
                             bs_type = lval_policy.get_bit_string().consume_sub_string(current_type.get_size())
-                            gamma_tmp.update(lval, bool_type)
+                            gamma_tmp.update(lval, bs_type)
                         case TYPE.TypesEnum.STRUCT:
                             struct_type = TS.bs_to_struct(lval_policy.get_bit_string(), current_type)
                             gamma_tmp.update(lval, struct_type)
@@ -111,8 +111,10 @@ if __name__ == '__main__':
                         case TYPE.TypesEnum.BOOL:
                             bool_type = lval_policy.get_bit_string().consume_sub_string(current_type.get_size(), _bool=True)
                             gamma_tmp.update(lval, bool_type)
+                        case TYPE.TypesEnum.INPUT_PACKET:
+                            gamma_tmp.update(lval, lval_policy.get_bit_string())
                 else: # the lavl used in the policy does not have a type in initial gamma
-                    gamma_tmp.update(lval_policy.get_lval(), lval_policy.get_bit_string())
+                    gamma_tmp.update(lval, lval_policy.get_bit_string())
             
             Gamma_g_init.append(gamma_tmp)
     else:
@@ -127,8 +129,10 @@ if __name__ == '__main__':
     for i, (gg, gl) in enumerate(final_Gamma):
         print("########## final gamma " + str(i+1) + ":")
         print(gg)
-        #print(gl)
+
+    # u_gamma = GM.intersect_Gammas(final_Gamma)
+    # for i, (gg, gl) in enumerate(u_gamma):
+    #     print("########## final gamma after intersection " + str(i+1) + ":")
+    #     print(gg)
 
 
-    # # for i in ast_lst:
-    # #     print(i)

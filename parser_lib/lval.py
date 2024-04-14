@@ -60,5 +60,12 @@ class Slice(Lval):
         self.lower = _lowbnd
         self.upper = _upbnd
 
+    def get_lower_index(self):
+        return self.lower
+    def get_upper_index(self):
+        return self.upper
+    def get_lval(self):
+        return self.lval
+
     def __str__(self):
         return "( " + str(self.lval) + "[" + str(self.lower) + ":" + str(self.upper) + "] )"

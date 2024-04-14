@@ -8,42 +8,39 @@ struct metadata_t {
 
 /////////////////////////////////////////////
 
-control MyCtrl(inout bit<2> x,
-               inout metadata_t metadata) 
+control MyCtrl() 
 {
-    
-    action drop(inout metadata_t metadata) {
+    action drop() {
         mark_to_drop(metadata);
     }
 
-    action multicast(inout metadata_t metadata) {
-        metadata.grp = 1;
+    action multicast() {
+        metadata.grp = 2w1;
     }
 
-    action mac_forward(bit<2> m, bit<2> n, inout bit<2> x, inout metadata_t metadata) {
-        metadata.spec = m;
-        x = n
+    action mac_forward(bit<2> port) {
+        metadata.spec = port;
     }
 
     table mac_lookup {
         key = {
-            hdr.ethernet.srcAddr : exact;
+            srcAddr : exact;
         }
         actions = {
-            multicast(metadata);
-            mac_forward(metadata);
-            drop(metadata);
+            multicast;
+            mac_forward;
+            drop;
         }
         size = 1024;
-        default_action = multicast(metadata);
+        default_action = multicast;
     }
     apply {
-            apply.mac_lookup [hdr.ethernet.srcAddr];
+            apply.mac_lookup [srcAddr];
     }
 }
 
 
-bit<3> x;
-metadata_t stm;
+bit<3> srcAddr;
+metadata_t metadata;
 
-MyCtrl(x, stm);
+MyCtrl();

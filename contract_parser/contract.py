@@ -52,6 +52,10 @@ class gamma_t():
     def update(self, _var, _type):
         self.mapping[_var] = _type
 
+    def raise_types(self, _lbl):
+        for var, tp in self.mapping.items():
+            tp.raise_label(_lbl)
+
     def get(self, _var):
         return copy.deepcopy(self.mapping[_var])
 

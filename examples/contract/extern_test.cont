@@ -1,0 +1,7 @@
+// extern
+extern someExtern:
+        true ->
+                (
+                        x : < bs[3], { (0, 2) -> ([0,0], high) } > // ,
+                        // b : < bs[3], { (0, 2) -> ([1,1], high) } > 
+                )

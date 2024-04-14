@@ -4,15 +4,16 @@ bit<3> y;
 
 x = 3w1;
 
-struct test {
-    bit<3> m;
-    bit<3> n;
-}
+// struct test {
+//     bit<3> m;
+//     bit<3> n;
+// }
 
-bit<3> func(out bit<3> a, out bit<3> b)
-{
-    someExtern(b);
-}
+// bit<3> func(out bit<3> a, out bit<3> b)
+// {
+//     someExtern(x);
+// }
+someExtern(x);
 
-test hdr;
-func(hdr.m, hdr.n);
+// test hdr;
+// func(hdr.m, hdr.n);

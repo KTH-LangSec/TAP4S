@@ -68,6 +68,12 @@ class ContractTransformer(Transformer):
     def type(self, *args):
         return args[0]
 
+    def bool_type(self, *args):
+        i_min = args[0]
+        i_max = args[1]
+        lable = args[2]
+        return TYPE.Bool(_interval=INTERVAL.Interval(i_min, i_max, 1), _label=lable)
+
     def bit_string_type(self, *args):
         size = args[0]
         slices = args[1]    
@@ -80,10 +86,10 @@ class ContractTransformer(Transformer):
         start, end = args[0]
         slice_size = int(end - start) + 1
         if args[1] == None:
-            interval = INTERVAL.Interval(0, (2 ** slice_size) - 1)
+            interval = INTERVAL.Interval(0, (2 ** slice_size) - 1, slice_size)
         else:
             low, high = args[1]
-            interval = INTERVAL.Interval(low, high)
+            interval = INTERVAL.Interval(low, high, slice_size)
         label = args[2]
 
         return TYPE.Slice(start, end, interval, label)
@@ -111,7 +117,7 @@ class ContractTransformer(Transformer):
     ############################# EXPRESSION #############################
     ###################################################################### 
     def predicate(self, *args):
-        return args[0] # TODO might cause bugs
+        return args[0]
 
     def binary_operation(self, *args):
         return EXP.BinaryOP(args[0], args[1], args[2])

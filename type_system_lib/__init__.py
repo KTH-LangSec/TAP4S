@@ -9,7 +9,7 @@ import type_system_lib.label as LATTICE
 import logger as LOGGER
 
 import copy
-
+import setting
 
 DEFINED_TYPES = {} # defined types, structs, headers, and input/output policy
 
@@ -36,12 +36,14 @@ def type_check_ast(_ast, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
 def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
     match _stm.get_node_type():
+        ################################################
         case AST.StatementsEnum.ASSIGNMET:
             exp_type = EXP.type_check_expression(_stm.get_expression(), _gamma_g, _gamma_l)
             exp_type.raise_label(_pc)
             GM.update(_stm.get_identifier(), exp_type, _gamma_g, _gamma_l)
             return [(_gamma_g, _gamma_l)]
 
+        ################################################
         case AST.StatementsEnum.FUNCTION_CALL:
             f_name = _stm.get_name()
             f_args = _stm.get_arguments()
@@ -52,7 +54,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                 if (f_type == MP.FunctionTypeEnum.CONTROL_BLOCK) or (f_type == MP.FunctionTypeEnum.PARSER):
                     LOGGER.error("Calling local parser or control block is not supported!")
                 else:
-                    return function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, f_name, f_args, f_body, f_params)
+                    return function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, f_args, f_body, f_params)
 
             ######### global function call #########
             elif (_B_g.exists(f_name)):
@@ -67,7 +69,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                     case MP.FunctionTypeEnum.STATE:
                         LOGGER.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     case _:
-                        return function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, f_name, f_args, f_body, f_params)
+                        return function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, f_args, f_body, f_params)
             
             ######### extern #########
             elif (_C.extern_exists(f_name)):
@@ -75,18 +77,19 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                 Gamma_f = []
 
                 for pred, gamma_t in cont.get().items():
-                    ref_gamma = GM.refine_cond(_gamma_g, _gamma_l, pred)
-                    if (ref_gamma != None):
-                        ref_gamma_g = ref_gamma[0]
-                        ref_gamma_l = ref_gamma[1]
-                        GM.augment(ref_gamma_l, gamma_t, f_args)
-                        Gamma_f.append((ref_gamma_g, ref_gamma_l))
+                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred)
+                    if (ref_Gamma != None):
+                        gamma_t.raise_types(_pc)
+                        for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
+                            GM.augment(ref_gamma_g, ref_gamma_l, gamma_t, f_args)
+                            Gamma_f.append((ref_gamma_g, ref_gamma_l))
 
                 return Gamma_f
 
             else:
                 LOGGER.error("Cannot find the definition of \"" + str(f_name) + "\"!")
 
+        ################################################
         case AST.StatementsEnum.IF:
             exp = _stm.get_expression()
             exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
@@ -97,14 +100,14 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             Gamma_f = [] 
             
             #### Gamma 1
-            ref_gamma_1 = GM.refine_cond(_gamma_g, _gamma_l, exp)
+            ref_gamma_1 = GM.refine(_gamma_g, _gamma_l, exp)
             if (ref_gamma_1 != None):
                 for (ref_gamma_g_e, ref_gamma_l_e) in ref_gamma_1:
                     Gamma_1 = type_check_ast(_stm.get_then_body(), ref_gamma_g_e, ref_gamma_l_e, pc_prime, _B_g, _B_l, _C)
                     Gamma_f.extend(Gamma_1)
 
             #### Gamma 2
-            ref_gamma_2 = GM.refine_cond(_gamma_g, _gamma_l, Pexp.negate(exp))
+            ref_gamma_2 = GM.refine(_gamma_g, _gamma_l, Pexp.negate(exp))
             if (ref_gamma_2 != None):
                 for (ref_gamma_g_ne, ref_gamma_l_ne) in ref_gamma_2:
                     Gamma_2 = type_check_ast(_stm.get_else_body(), ref_gamma_g_ne, ref_gamma_l_ne, pc_prime, _B_g, _B_l, _C)
@@ -116,6 +119,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             
             return Gamma_f
 
+        ################################################
         case AST.StatementsEnum.EXTRACT_CALL:
             packet_in = _stm.get_packet_in()
             argument = _stm.get_argument()
@@ -132,6 +136,34 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
             return [(_gamma_g, _gamma_l)]
 
+        ################################################
+        case AST.StatementsEnum.EMIT_CALL:
+            packet_out = _stm.get_packet_out()
+            argument = _stm.get_argument()
+
+            arg_type = GM.lookup(argument, _gamma_g, _gamma_l)
+            size = arg_type.get_size()
+
+            packet_out_type = GM.lookup(packet_out, _gamma_g, _gamma_l)
+            match packet_out_type.get_type():
+                case TYPE.TypesEnum.BIT_STRING: # there was an emit before, so we have to append
+                    size = packet_out_type.get_size()
+                    slices = packet_out_type.get_slices()
+
+                    tmp_type = convert_to_bs(arg_type)
+                    size += tmp_type.get_size()
+                    slices.extend(tmp_type.get_slices())
+
+                    bs_type = TYPE.BitString(size, _slices=slices)
+                    
+                case TYPE.TypesEnum.OUTPUT_PACKET: # first emit, just generate a bit-string type
+                    bs_type = convert_to_bs(arg_type)
+
+            GM.update(packet_out, bs_type, _gamma_g, _gamma_l)
+
+            return [(_gamma_g, _gamma_l)]
+
+        ################################################
         case AST.StatementsEnum.CONTROL_BLOCK_CALL:
             ct_name = _stm.get_name()
             ct_args = _stm.get_arguments()
@@ -141,12 +173,12 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                 ct_apply_body = ct_body[0].get_body()
                 ctrl_body = ct_body[1]
 
-                return control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, ct_name, ct_args, ct_apply_body, ctrl_body, ct_params)
+                return control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, ct_args, ct_apply_body, ctrl_body, ct_params)
             
             else:
                 LOGGER.error("Cannot find the definition of control block \"" + str(f_name) + "\"!")
 
-
+        ################################################
         case AST.StatementsEnum.PARSER_CALL:
             p_name = _stm.get_name()
             p_args = _stm.get_arguments()
@@ -155,8 +187,9 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             B_l = generate_B_mapping(p_body, _global=False)
             start_state_body, _, _ = B_l.get("start")
 
-            return parser_call(_gamma_g, _gamma_l, _pc, _B_g, B_l, _C, p_name, p_args, start_state_body, p_params)
+            return parser_call(_gamma_g, _gamma_l, _pc, _B_g, B_l, _C, p_args, start_state_body, p_params)
 
+        ################################################
         case AST.StatementsEnum.TRANSITION:
             exp = _stm.get_expression()
             exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
@@ -173,21 +206,27 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                     states.append(value_state.get_state())
 
             ref_Gamma = GM.refine_trans(_gamma_g, _gamma_l, exp, values)
-            states.append(_stm.get_default_state()) # adding the default state last
+            default_state = _stm.get_default_state()
 
             if (len(ref_Gamma) == 1): # there is only a default state
                 ref_gamma_g, ref_gamma_l = ref_Gamma[0]
-                state_body_d, _, _ = _B_l.get(states[0])
+                state_body_d, _, _ = _B_l.get(default_state)
                 # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
                 Gamma_d = type_check_ast(state_body_d, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
                 Gamma_f = Gamma_d
             else:
                 Gamma_f = []
                 for i, (ref_gamma_g, ref_gamma_l) in enumerate(ref_Gamma):
-                    state_body_i, _, _ = _B_l.get(states[i])
-                    # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
-                    Gamma_i = type_check_ast(state_body_i, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
-                    Gamma_f.extend(Gamma_i)
+                    if i < len(states):
+                        state_body_i, _, _ = _B_l.get(states[i])
+                        # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
+                        Gamma_i = type_check_ast(state_body_i, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
+                        Gamma_f.extend(Gamma_i)
+                    else:
+                        state_body_d, _, _ = _B_l.get(default_state)
+                        # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
+                        Gamma_d = type_check_ast(state_body_d, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
+                        Gamma_f.extend(Gamma_d)
             
 
             if (l.is_high()):
@@ -195,14 +234,35 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
             return Gamma_f
 
-
+        ################################################
         case AST.StatementsEnum.APPLY:
-            print("here")
+            table_name = _stm.get_table_name()
+            arguments = _stm.get_arguments()
+
+            label = LATTICE.Low()
+            for exp in arguments:
+                exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
+                label = LATTICE.lup(label, exp_type.get_label())
+
+            pc_prime = LATTICE.lup(_pc, label)
+
+            Gamma_f = []
+            cont = _C.get_table(table_name)
+            for pred, (act, gamma_t) in cont.get().items():
+                sat = GM.is_sat(_gamma_g, _gamma_l, pred)
+                if sat:
+                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred)
+                    a_body, a_params, a_type = _B_l.get(act)
+                    for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
+                        returned_Gamma = action_call(ref_gamma_g, ref_gamma_l, pc_prime, _B_g, _C, gamma_t, a_body, a_params)
+                        Gamma_f.extend(returned_Gamma)
 
 
-            return [(_gamma_g, _gamma_l)]
 
-        case _: #TODO temp
+            return Gamma_f
+
+        ################################################
+        case _: # for declaration
             return [(_gamma_g, _gamma_l)]
 
 
@@ -229,13 +289,7 @@ def generate_B_mapping(_ast, _global=True):
                     B.add(stm.get_name(), (stm.get_apply_block(), stm.get_body()), stm.get_parameters(), MP.FunctionTypeEnum.CONTROL_BLOCK)
 
                 case AST.StatementsEnum.PARSER_DEFINITION:
-                    parameters = []
-                    parameters.append(stm.get_packet_in())
-                    parameters.append(stm.get_header())
-                    if (stm.get_parameters() != None):
-                        parameters.extend(stm.get_parameters())
-
-                    B.add(stm.get_name(), stm.get_body(), parameters, MP.FunctionTypeEnum.PARSER)
+                    B.add(stm.get_name(), stm.get_body(), stm.get_parameters(), MP.FunctionTypeEnum.PARSER)
 
                 case AST.StatementsEnum.STATE_DEFINITION:
                     B.add(stm.get_name(), stm.get_body(), None ,MP.FunctionTypeEnum.STATE)
@@ -253,7 +307,6 @@ def generate_gamma(_ast, _global, _params=None):
             for param in _params:
                 gamma.add(param.get_variable(), generate_type(param.get_type()))
     
-    # TODO: need to check both branches of if as well
     for stm in _ast:
         if issubclass(type(stm), AST.Statement):
             match stm.get_node_type():
@@ -262,17 +315,21 @@ def generate_gamma(_ast, _global, _params=None):
 
                 case AST.StatementsEnum.CONSTANT_DECLARATION:
                     gamma.add(stm.get_variable(), generate_type(stm.get_type(), stm.get_value()))
+
+                case AST.StatementsEnum.IF:
+                    then_gamma = generate_gamma(stm.get_then_body(), _global=True)
+                    else_gamma = generate_gamma(stm.get_else_body(), _global=True)
+                    GM.union(gamma, then_gamma)
+                    GM.union(gamma, else_gamma)
     return gamma
 
 
 ##############################################################
 ##############################################################
 def generate_type(_stm_type, _value=None):
-
-    # TODO: Support struct value 
-
     if issubclass(type(_stm_type), Ptypes.PrimitiveType):
         match _stm_type.get_type():
+            # TODO: Support struct value 
             case Ptypes.TypesEnum.BIT_STRING:
                 return TYPE.BitString(_stm_type.get_size(), _value=_value)
 
@@ -281,6 +338,12 @@ def generate_type(_stm_type, _value=None):
             
     elif _stm_type in DEFINED_TYPES:
         return DEFINED_TYPES[_stm_type]
+
+    elif _stm_type == setting.PACKET_IN:
+        return TYPE.PacketIn()
+
+    elif _stm_type == setting.PACKET_OUT:
+        return TYPE.PacketOut()
 
 ##############################################################
 ##############################################################
@@ -305,10 +368,27 @@ def get_defined_types(_ast):
 
 
 ##############################################################
-####################### PARSER CALL #########################
+####################### ACTION CALL ##########################
 ##############################################################
-def parser_call(_gamma_g, _gamma_l, _pc, _B_g, _B_l, _C, _p_name, _p_args, _start_body, _p_params):
-    gamma_l_p, co = function_call_preprocess(_gamma_g, _gamma_l, _p_name, _p_args, _start_body, _p_params)
+def action_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _gamma_t, _a_body, _a_params):
+    ## local B
+    B_l = generate_B_mapping(_a_body, _global=False)  
+
+    ## local gamma
+    gamma_l = generate_gamma(_a_body, _global=False, _params=_a_params)
+    for param in _a_params:
+        exp_type = _gamma_t.get(param.get_variable())
+        GM.update(param.get_variable(), exp_type, _gamma_g, gamma_l)
+
+    returned_Gamma = type_check_ast(_a_body, _gamma_g, gamma_l, _pc, _B_g, B_l, _C)
+
+    return returned_Gamma
+
+##############################################################
+####################### PARSER CALL ##########################
+##############################################################
+def parser_call(_gamma_g, _gamma_l, _pc, _B_g, _B_l, _C, _p_args, _start_body, _p_params):
+    gamma_l_p, co = function_call_preprocess(_gamma_g, _gamma_l, _p_args, _start_body, _p_params)
     returned_Gamma = type_check_ast(_start_body, _gamma_g, gamma_l_p, _pc, _B_g, _B_l, _C)
 
     Gamma_n = []
@@ -320,10 +400,10 @@ def parser_call(_gamma_g, _gamma_l, _pc, _B_g, _B_l, _C, _p_name, _p_args, _star
 ##############################################################
 #################### CONTROL BLOCK CALL ######################
 ##############################################################
-def control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _ct_name, _ct_args, _ct_apply_body, _ct_body, _ct_params):
+def control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _ct_args, _ct_apply_body, _ct_body, _ct_params):
     B_l = generate_B_mapping(_ct_body, _global=False)
     
-    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _ct_name, _ct_args, _ct_body, _ct_params)
+    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _ct_args, _ct_body, _ct_params)
     returned_Gamma = type_check_ast(_ct_apply_body, _gamma_g, gamma_l_f, _pc, _B_g, B_l, _C)
 
     Gamma_n = []
@@ -335,9 +415,9 @@ def control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _ct_name, _ct_args, _c
 ##############################################################
 ###################### FUNCTION CALL #########################
 ##############################################################
-def function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _f_name, _f_args, _f_body, _f_params):
+def function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _f_args, _f_body, _f_params):
     B_l = generate_B_mapping(_f_body, _global=False)  
-    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _f_name, _f_args, _f_body, _f_params)
+    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _f_args, _f_body, _f_params)
     returned_Gamma = type_check_ast(_f_body, _gamma_g, gamma_l_f, _pc, _B_g, B_l, _C)
 
     Gamma_n = []
@@ -347,7 +427,7 @@ def function_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _f_name, _f_args, _f_body, 
     return Gamma_n
 
 
-def function_call_preprocess(_gamma_g, _gamma_l, _f_name, _f_args, _f_body, _f_params):
+def function_call_preprocess(_gamma_g, _gamma_l, _f_args, _f_body, _f_params):
     ## local gamma
     gamma_l = generate_gamma(_f_body, _global=False, _params=_f_params)
     for i, param in enumerate(_f_params):
@@ -373,10 +453,42 @@ def function_call_postprocess(_gamma_g, _gamma_l, _co, _gamma_l_old):
     return (_gamma_g, _gamma_l_old)
 
 ##############################################################
-####################### EXTERN CALL ##########################
+####################### EMIT CALL ##########################
 ##############################################################
-def extern_call():
-    pass
+def convert_to_bs(_input_type):
+    input_type = copy.deepcopy(_input_type)
+
+    match input_type.get_type():
+        case TYPE.TypesEnum.HEADER | TYPE.TypesEnum.STRUCT:
+            slices = []
+            size = 0
+            for fld_n, fld_type in input_type.get_fields():
+                match fld_type.get_type():
+                    case TYPE.TypesEnum.STRUCT:
+                        bs_type = struct_to_bs(fld_type)
+                        size += bs_type.get_size()
+                        slices.extend(bs_type.get_slices())
+                    case TYPE.TypesEnum.HEADER:
+                        bs_type = struct_to_bs(fld_type)
+                        size += bs_type.get_size()
+                        slices.extend(bs_type.get_slices())
+                    case TYPE.TypesEnum.BIT_STRING:
+                        size += fld_type.get_size()
+                        slices.extend(fld_type.get_slices())
+                    case TYPE.TypesEnum.BOOL:
+                        bslice = TYPE.Slice(0, 1, fld_type.get_interval(), fld_type.get_label())
+                        size += 1
+                        slices.append(bslice)
+
+            return TYPE.BitString(size, _slices=slices)
+
+        case TYPE.TypesEnum.BIT_STRING:
+            return input_type
+
+        case TYPE.TypesEnum.BOOL:
+            bslice = TYPE.Slice(0, 1, input_type.get_interval(), input_type.get_label())
+            return TYPE.BitString(1, _slices=[bslice])
+
 
 ##############################################################
 ###################### EXTRACT CALL ##########################

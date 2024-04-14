@@ -35,19 +35,13 @@ class P4Transformer(Transformer):
     ############################# EXPRESSION #############################
     ###################################################################### 
     def expression(self, *args):
-        return args[0] # TODO might cause bugs
-
-    # def slicing(self, *args):
-    #     return expression.Slice(args[0], args[2], args[1])
+        return args[0] 
 
     def binary_operation(self, *args):
         return expression.BinaryOP(args[0], args[1], args[2])
 
     def unary_operation(self, *args):
         return expression.UnaryOP(args[0], args[1])
-
-    # def access(self, *args):
-    #     return expression.Access(list(args))
 
     def boolean_value(self, *args):
         return expression.Boolean(args[0])
@@ -210,28 +204,25 @@ class P4Transformer(Transformer):
             parameters = args[1]
             body = args[2]
         return ast.ActionDefinition(name, parameters, body)
-        #return {"stm_type" : "action_definition", "name": name, "parameters": parameters , "body" : body}
+
 
     ###################################
     def parser_definition(self, *args):
-        name = args[0]
-        packetin = identifiers.Parameter("inout", "packet_in", args[1])
-        if len(args[2]) == 1:
-            header = args[2][0]
-            parameters = None
+        if len(args) == 2:
+            name = args[0]
+            parameters = None;
+            body = args[1]
         else:
-            header = args[2][0]
-            parameters = list(args[2][1:])
-        body = args[3]
-        return ast.ParserDefinition(name, packetin, header, parameters, body)
-        #return {"stm_type" : "parser_definition", "name": name, "packet_in": packetin , "header": header, "parameters": parameters , "body" : body}
+            name = args[0]
+            parameters = args[1]
+            body = args[2]
+        return ast.ParserDefinition(name, parameters, body)
 
 
     def state_definition(self, *args):
         name = args[0]
         body = args[1]
         return ast.StateDefinition(name, body)
-        #return {"stm_type" : "state_definition", "name": name, "body" : body}
 
     #########################################
     def controlblock_definition(self, *args):

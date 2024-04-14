@@ -76,7 +76,7 @@ table_size_definition: "size" "=" NUMBER ";"
 table_default_definition: "default_action" "=" IDENTIFIER ("(" ")")? ";"
 
 
-parser_definition: "parser" IDENTIFIER "(" "packet_in" IDENTIFIER "," parameters ")" "{" block "}"
+parser_definition: "parser" IDENTIFIER ( "(" parameters ")" | "(" ")" ) "{" block "}"
 state_definition: "state" IDENTIFIER "{" block "}"
 
 transition: "transition" "select"  "(" (expression)? ")" "{" value_states default_state "}"
@@ -92,8 +92,6 @@ expression: binary_operation
     | lval
     | "(" expression ")"
 
-// access: IDENTIFIER ("." IDENTIFIER)+
-// slicing: expression "[" NUMBER ":" NUMBER "]"
 binary_operation: expression OPERATOR expression
 unary_operation: UOPERATOR expression
 

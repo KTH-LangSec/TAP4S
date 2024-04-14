@@ -1,0 +1,20 @@
+// extern
+extern mark_to_drop:
+        true ->
+                (
+                    metadata.spec : < bs[3], { (0, 2) -> ([0,0], low) } >
+                )
+
+
+// table
+table mac_lookup:
+        srcAddr == 3w1 ->
+                        mac_forward,
+                        (
+                            port : < bs[3], { (0, 2) -> ([5,5], high) } >
+                        )
+        srcAddr == 3w4 -> 
+                        multicast, ()
+
+        (srcAddr != 3w1) && (srcAddr != 3w4) ->
+                                          drop, ()

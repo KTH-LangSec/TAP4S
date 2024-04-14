@@ -1,0 +1,15 @@
+// extern
+mark_to_drop:
+true -> 
+    standard_metadata.egress_spec : < bs[9], { (0, 9) -> ([0,0], low) } > ;
+
+
+// table
+mac_lookup:
+hdr.ethernet.srcAddr == 08:01:* ->
+    mac_forward,
+    port = 1,
+    tmpAddr = 08:01:*
+
+// if the temp address is not this value, then we are forwarding to the wrong sub-net and migh leak information.
+

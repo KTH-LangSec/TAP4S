@@ -11,17 +11,42 @@ class TypesEnum(Enum):
     STRUCT = 3
     HEADER = 4
 
+    INPUT_PACKET = 100
+    OUTPUT_PACKET = 101
+
+##################
+class PacketIn():
+    def __init__(self):
+        self.type = TypesEnum.INPUT_PACKET
+
+    def get_type(self):
+        return self.type
+
+    def __str__(self):
+        return "input packet bit-string"
+
+##################
+class PacketOut():
+    def __init__(self):
+        self.type = TypesEnum.OUTPUT_PACKET
+
+    def get_type(self):
+        return self.type
+
+    def __str__(self):
+        return "output packet bit-string"
+
 ##################
 class Bool():
     def __init__(self, _value=None, _label=LATTICE.Low(), _interval=None):
         self.type = TypesEnum.BOOL
-        self.label = LATTICE.Low()
+        self.label = _label
 
         if (_interval == None):
             if (_value != None):
-                interval = INTERVAL.Interval(_value , _value)
+                interval = INTERVAL.Interval(_value , _value, 1)
             else:
-                interval = INTERVAL.Interval(0, 1)
+                interval = INTERVAL.Interval(0, 1, 1)
         else:
             interval = _interval
 
@@ -39,6 +64,9 @@ class Bool():
     def get_label(self):
         return self.label
 
+    def set_interval(self, _interval):
+        self.interval = _interval
+
     def is_true(self):
         return self.interval.is_true()
 
@@ -55,14 +83,12 @@ class BitString():
         self.type = TypesEnum.BIT_STRING
         self.size = _size
         self.slices = []
-
-        # TODO, check that the indices of the slices doesn't overlap
     
         if (_interval == None):
             if (_value != None):
-                interval = INTERVAL.Interval(_value , _value)
+                interval = INTERVAL.Interval(_value , _value, self.size)
             else:
-                interval = INTERVAL.Interval(0, (2 ** self.size) - 1)
+                interval = INTERVAL.Interval(0, (2 ** self.size) - 1, self.size)
         else:
             interval = _interval
         
@@ -124,9 +150,21 @@ class BitString():
             total_label = LATTICE.lup(total_label, slc.get_label())
         return total_label
 
+    def get_overlapping_slices(self, _slice):
+        start, end = _slice.get_slice_indices()
+        overlaps= []
+        for slc in self.slices:
+            s_start, s_end = slc.get_slice_indices()
+            if (s_end >= start) and (s_start <= end):
+                overlaps.append(slc)
+
+        return overlaps
+
+
+
     def consume_sub_string(self, _size, _bool=False):
         if (self.size < _size):
-            LOGGER.error("cannot extract " + str(_size) + " bits from a" + str(self.size) + " bit bit-string!")
+            LOGGER.error("cannot extract " + str(_size) + " bits from a " + str(self.size) + " bits bit-string!")
 
         return_sub_slices = []
         keep_sub_slices = []
@@ -145,7 +183,7 @@ class BitString():
                 keep_sub_slices.append(slc)
 
         self.update_slices(keep_sub_slices)
-        
+
         if (_bool == False):
             return BitString(_size, _slices=return_sub_slices)
         else:
@@ -320,6 +358,9 @@ class Slice():
     def get_size(self):
         return self.size
 
+    def set_interval(self, _interval):
+        self.interval = _interval
+
     def split(self, _split_index):
         length = self.size
 
@@ -339,7 +380,7 @@ class Slice():
         r_min = min(int(a, 2), int(c, 2)) 
         r_max = max(int(a, 2), int(c, 2))
 
-        ret_slc = Slice(r_start, r_end, INTERVAL.Interval(r_min, r_max), self.label)
+        ret_slc = Slice(r_start, r_end, INTERVAL.Interval(r_min, r_max, r_size), self.label)
         
         # keep
         k_size = int(length - _split_index)
@@ -360,7 +401,7 @@ class Slice():
                 k_min = min(int(b, 2), int(d, 2)) 
                 k_max = max(int(b, 2), int(d, 2))
 
-        keep_slc = Slice(k_start, k_end, INTERVAL.Interval(k_min, k_max), self.label)
+        keep_slc = Slice(k_start, k_end, INTERVAL.Interval(k_min, k_max, k_size), self.label)
 
         return(ret_slc, keep_slc)
 

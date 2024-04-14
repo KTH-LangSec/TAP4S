@@ -228,6 +228,11 @@ class Apply(Statement):
         self.table_name = _tname
         self.keys = _keys
 
+    def get_table_name(self):
+        return self.table_name
+    def get_arguments(self):
+        return self.keys
+
     def __str__(self):
         if self.keys:
             keys_lst = ', '.join(list(map(str, self.keys)))
@@ -353,11 +358,9 @@ class ActionDefinition(Statement):
 
 ##############
 class ParserDefinition(Statement):
-    def __init__(self, _name, _packetin, _header, _params, _body):
+    def __init__(self, _name, _params, _body):
         super().__init__(StatementsEnum.PARSER_DEFINITION) 
         self.name = _name
-        self.packet_in = _packetin
-        self.header = _header
 
         if (_params != None):
             self.parameters = list(_params)
@@ -374,18 +377,14 @@ class ParserDefinition(Statement):
         return self.body
     def get_parameters(self):
         return self.parameters
-    def get_packet_in(self):
-        return self.packet_in
-    def get_header(self):
-        return self.header
 
     def __str__(self):
         if self.parameters:
             params_lst = ', '.join(list(map(str, self.parameters)))
             params = "[" + params_lst + "]"
-            return "< parser definition with NAME: " + str(self.name) + ", PACKET IN: " + str(self.packet_in) + ", HEADER: " + str(self.header) + ", PARAMETERS: " + params + ", and BODY: " + str(self.body) + " >"
+            return "< parser definition with NAME: " + str(self.name) + ", PARAMETERS: " + params + ", and BODY: " + str(self.body) + " >"
         else:
-            return "< parser definition with NAME: " + str(self.name) + ", PACKET IN: " + str(self.packet_in) + ", HEADER: " + str(self.header) + ", NO PARAMETERS, and BODY: " + str(self.body) + " >"
+            return "< parser definition with NAME: " + str(self.name) + ", NO PARAMETERS, and BODY: " + str(self.body) + " >"
 
 
 ##############

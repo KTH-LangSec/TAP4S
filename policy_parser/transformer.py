@@ -35,10 +35,10 @@ class PolicyTransformer(Transformer):
         start, end = args[0]
         slice_size = int(end - start) + 1
         if args[1] == None:
-            interval = INTERVAL.Interval(0, (2 ** slice_size) - 1)
+            interval = INTERVAL.Interval(0, (2 ** slice_size) - 1, slice_size)
         else:
             low, high = args[1]
-            interval = INTERVAL.Interval(low, high)
+            interval = INTERVAL.Interval(low, high, slice_size)
         label = args[2]
 
         return TYPE.Slice(start, end, interval, label)
