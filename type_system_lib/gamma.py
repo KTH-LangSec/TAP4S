@@ -23,6 +23,13 @@ class GlobalGamma(Gamma):
         super().__init__(GammaEnum.GLOBAL) 
         self.mapping = {}
 
+        self.validity = True
+
+    def invalidate(self):
+        self.validity = False
+    def is_valid(self):
+        return self.validity
+
     def add(self, _var, _type):
         self.mapping[_var] = _type
     def update(self, _var, _type):
@@ -43,10 +50,20 @@ class GlobalGamma(Gamma):
     def has_same_domain_as(self, _other):
         return set(self.mapping.keys()) == set(_other.get_keys())
 
+    def project(self, _keys_to_keep):
+        return_gamma = GlobalGamma()
+        for key, value in self.mapping.items():
+            if key in _keys_to_keep:
+                return_gamma.add(key, value)
+        return return_gamma
+
+
     def __str__(self):
-        result = "gamma_G: \n"
+        #result = "gamma_G: \n"
+        result = ""
         for var in self.mapping.keys():
             result += "\t" + str(var) + " -> " + str(self.mapping[var]) + "\n"
+        result += "\n\tIs Valid: " + str(self.validity) + "\n"
         return result
 
 ###########################################################
@@ -55,6 +72,13 @@ class LocalGamma(Gamma):
         super().__init__(GammaEnum.LOCAL) 
         self.mapping = {}
 
+        self.validity = True
+
+    def invalidate(self):
+        self.validity = False
+    def is_valid(self):
+        return self.validity
+
     def add(self, _var, _type):
         self.mapping[_var] = _type
     def update(self, _var, _type):
@@ -74,17 +98,26 @@ class LocalGamma(Gamma):
 
     def has_same_domain_as(self, _other):
         return set(self.mapping.keys()) == set(_other.get_keys())
+    
+    def project(self, _keys_to_keep):
+        return_gamma = LocalGamma()
+        for key, value in self.mapping.items():
+            if key in _keys_to_keep:
+                return_gamma.add(key, value)
+        return return_gamma
 
     def __str__(self):
-        result = "gamma_L: \n"
+        #result = "gamma_L: \n"
+        result = ""
         for var in self.mapping.keys():
             result += "\t" + str(var) + " -> " + str(self.mapping[var]) + "\n"
+        result += "\n\tIs Valid: " + str(self.validity) + "\n"
         return result
 
 
 
 ############################################################
-######################### UPDATE ###########################
+######################### Update ###########################
 ############################################################
 def update(_lval, _type, _gamma_g, _gamma_l):
     match _lval.get_type():
@@ -161,7 +194,7 @@ def lookup(_lval, _gamma_g, _gamma_l):
             pass # TODO SLICE
 
 ############################################################
-################## LABEL JOIN $\sqcup$ #####################
+######################## Join ⊔ ############################
 ############################################################
 def join_Gammas(_Gamma_list):
     for i in range(len(_Gamma_list)):
@@ -200,6 +233,8 @@ def join_type(_type_1, _type_2):
                                 _type_2.get_slice(i).raise_label(LATIICE.High())
                     else:
                         LOGGER.warning("joining two bit-strings with different slices is highly overapproximating.")
+                        LOGGER.warning("---- joining " + str(_type_1))
+                        LOGGER.warning("---- and " + str(_type_2))
 
                         for slc_1 in _type_1.get_slices():
                             overlaps = _type_2.get_overlapping_slices(slc_1)
@@ -215,21 +250,28 @@ def join_type(_type_1, _type_2):
                                 overlap_label = LATIICE.lup(overlap_label, ovr.get_label())
                             slc_2.raise_label(overlap_label)
                 else: # the lengths are NOT the same
-                    LOGGER.warning("joining two bit-strings with different lengths is highly overapproximating.")
+                    if (_type_1.get_size() == 0):
+                        _type_1 = copy.deepcopy(_type_2)
+                    elif (_type_2.get_size() == 0):
+                        _type_2 = copy.deepcopy(_type_1)
+                    else:
+                        LOGGER.warning("joining two bit-strings with different lengths is highly overapproximating.")
+                        LOGGER.warning("---- joining " + str(_type_1))
+                        LOGGER.warning("---- and " + str(_type_2))
 
-                    for slc_1 in _type_1.get_slices():
-                        overlaps = _type_2.get_overlapping_slices(slc_1)
-                        overlap_label = LATIICE.Low()
-                        for ovr in overlaps:
-                            overlap_label = LATIICE.lup(overlap_label, ovr.get_label())
-                        slc_1.raise_label(overlap_label)
+                        for slc_1 in _type_1.get_slices():
+                            overlaps = _type_2.get_overlapping_slices(slc_1)
+                            overlap_label = LATIICE.Low()
+                            for ovr in overlaps:
+                                overlap_label = LATIICE.lup(overlap_label, ovr.get_label())
+                            slc_1.raise_label(overlap_label)
 
-                    for slc_2 in _type_2.get_slices():
-                        overlaps = _type_1.get_overlapping_slices(slc_2)
-                        overlap_label = LATIICE.Low()
-                        for ovr in overlaps:
-                            overlap_label = LATIICE.lup(overlap_label, ovr.get_label())
-                        slc_2.raise_label(overlap_label)
+                        for slc_2 in _type_2.get_slices():
+                            overlaps = _type_1.get_overlapping_slices(slc_2)
+                            overlap_label = LATIICE.Low()
+                            for ovr in overlaps:
+                                overlap_label = LATIICE.lup(overlap_label, ovr.get_label())
+                            slc_2.raise_label(overlap_label)
 
 
             case TYPE.TypesEnum.STRUCT:
@@ -244,7 +286,7 @@ def join_type(_type_1, _type_2):
                     for name, fld in _type_1.get_fields():
                         join_type(fld, _type_2.get_field(name))
                 else:
-                    LOGGER.warning("join two headers with different fields is not supported!")
+                    LOGGER.error("join two headers with different fields is not supported!")
 
 
 ##############################################################
@@ -268,80 +310,439 @@ def augment(_gamma_g, _gamma_l, _gamma_t, _args):
 
 
 ##############################################################
-############################ SAT #############################
+######################### Refinement #########################
 ##############################################################
-def is_sat(_gamma_g, _gamma_l, _exp):
+def refine(_gamma_g, _gamma_l, _exp, _label):
     exp_type = T_EXP.type_check_expression(_exp, _gamma_g, _gamma_l)
 
     if (exp_type.is_false()):
-        return False
-    else:
-        return True
-
-##############################################################
-########################### REFINE ###########################
-##############################################################
-def refine(_gamma_g, _gamma_l, _exp):
-    exp_type = T_EXP.type_check_expression(_exp, _gamma_g, _gamma_l)
-
-    if (exp_type.is_false()):
-        return None
+        if (_label.is_low()):
+            return None
+        else:
+            return invalidate_gammas(refinement(_gamma_g, _gamma_l, _exp))
     elif (exp_type.is_true()):
-        return [(_gamma_g, _gamma_l)]
-    else:
-        return_Gamma = []
-        if (_exp.get_type() == P_EXP.ExpressionEnum.BINARY):
-            if (_exp.is_simple()):
-                refined_Gammas = T_EXP.refine_expression(_exp, _gamma_g, _gamma_l)
-                return_Gamma.extend(refined_Gammas)
-            else:
-                if (_exp.get_op() == "&&"):
-                    lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
-                    for (gg, gl) in lhs_Gamma:
-                        refined_Gammas = T_EXP.refine_expression(_exp.get_rhs(), gg, gl)
-                        return_Gamma.extend(refined_Gammas)
-                elif (_exp.get_op() == "||"):
-                    lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
-                    rhs_Gamma = T_EXP.refine_expression(_exp.get_rhs(), _gamma_g, _gamma_l)
-                    return_Gamma.extend(lhs_Gamma)
-                    return_Gamma.extend(rhs_Gamma)
-                else:
-                    LOGGER.warning("Cannot refine by the expression: " + str(_exp))
-                    return_Gamma.append((_gamma_g, _gamma_l)) # return without any modifications
-                
-                
-        return return_Gamma
-
-###############################################################
-def refine_trans(_gamma_g, _gamma_l, _exp, _vals):
-    if (len(_vals) == 0):
         return [(copy.deepcopy(_gamma_g), copy.deepcopy(_gamma_l))]
+    else:
+        return refinement(_gamma_g, _gamma_l, _exp)
+
+
+############# Transition
+def refine_trans(_gamma_g, _gamma_l, _exp, _vals, _states, _default_state, _label):
+    res = {}
+
+    if (len(_vals) == 0):
+        res["default"] = [(copy.deepcopy(_gamma_g), copy.deepcopy(_gamma_l))]
+        return res
 
     else:
         neg_expressions = []
-        res = []
-        for val in _vals:
+        for i, val in enumerate(_vals):
             exp = P_EXP.BinaryOP(_exp, "==", val)
             neg_expressions.append(P_EXP.negate(exp))
-            res.extend(refine(_gamma_g, _gamma_l, exp))
+            temp_Gamma = refine(_gamma_g, _gamma_l, exp, _label)
+            if (temp_Gamma != None):
+                res[_states[i]] = temp_Gamma
 
         # Default
-        default_Gamma = []
         nexp = neg_expressions[0]
-        default_Gamma = refine(_gamma_g, _gamma_l, nexp)
-        for i in range(1, len(neg_expressions)):
-            nexp = neg_expressions[i]
-            temp_Gamma = []
-            for (gg, gl) in default_Gamma:
-                temp_Gamma.extend(refine(gg, gl, nexp))
-            default_Gamma = temp_Gamma
+        default_Gamma = refine(_gamma_g, _gamma_l, nexp, _label)
+        if (default_Gamma != None):
+            for i in range(1, len(neg_expressions)):
+                nexp = neg_expressions[i]
+                temp_Gamma = []
+                for (gg, gl) in default_Gamma:
+                    ref_Gamma = refine(gg, gl, nexp, _label)
+                    if (ref_Gamma != None):
+                        temp_Gamma.extend(ref_Gamma)
+                default_Gamma = temp_Gamma
         
-        res.extend(default_Gamma)
+            res[_default_state] = default_Gamma
 
         return res
 
+############# Actual refinement
+def refinement(_gamma_g, _gamma_l, _exp):
+    return_Gamma = []
+    if (_exp.get_type() == P_EXP.ExpressionEnum.BINARY):
+        if (_exp.is_simple()):
+            refined_Gammas = T_EXP.refine_expression(_exp, _gamma_g, _gamma_l)
+            return_Gamma.extend(refined_Gammas)
+        else:
+            if (_exp.get_op() == "&&"):
+                lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
+                for (gg, gl) in lhs_Gamma:
+                    refined_Gammas = T_EXP.refine_expression(_exp.get_rhs(), gg, gl)
+                    return_Gamma.extend(refined_Gammas)
+            elif (_exp.get_op() == "||"):
+                lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
+                rhs_Gamma = T_EXP.refine_expression(_exp.get_rhs(), _gamma_g, _gamma_l)
+                return_Gamma.extend(lhs_Gamma)
+                return_Gamma.extend(rhs_Gamma)
+            else:
+                LOGGER.warning("Cannot refine by the expression: " + str(_exp))
+                return_Gamma.append((copy.deepcopy(_gamma_g), copy.deepcopy(_gamma_l))) # return without any modifications
+            
+    return return_Gamma
 
-###############################################################
+
+############################################################
+###################### Intersect ∩ #########################
+############################################################
+def is_gamma_intersect_empty(_gamma_1, _gamma_2):
+    if not (_gamma_1.has_same_domain_as(_gamma_2)):
+        p_gamma_1 = _gamma_1.project(_gamma_2.get_keys())
+        p_gamma_2 = _gamma_2.project(_gamma_1.get_keys())
+        return is_gamma_intersect_empty(p_gamma_1, p_gamma_2)
+    else:
+        for lval in _gamma_1.get_keys():
+            type_1 = _gamma_1.get(lval)
+            type_2 = _gamma_2.get(lval)
+            if is_type_intersect_empty(type_1, type_2):
+                return True
+
+        return False
+
+
+def is_type_intersect_empty(_type_1, _type_2):
+    if (_type_1.get_type() != _type_2.get_type()):
+        return True
+    else:
+        match _type_1.get_type():
+            case TYPE.TypesEnum.BOOL:
+                interval_1 = _type_1.get_interval()
+                interval_2 = _type_2.get_interval()
+                intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+
+                if (intersect_interval == None):
+                    return True
+                else:
+                    return False
+
+            case TYPE.TypesEnum.BIT_STRING:
+                if (_type_1.get_size() == _type_2.get_size()): # the lengths are the same
+                    if (_type_1.has_same_slices_as(_type_2)):
+                        for i, slc in enumerate(_type_1.get_slices()):
+                            interval_1 = slc.get_interval()
+                            interval_2 = _type_2.get_slice(i).get_interval()
+                            intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+                            
+                            if (intersect_interval == None): # check if there is actually any intersection
+                                return True
+
+                        return False
+                    
+                    else:
+                        for i, slc in enumerate(_type_1.get_slices()):
+                            overlaps = _type_2.get_overlapping_slices(slc)
+
+                            if (len(overlaps) <= 0):
+                                return True
+                            
+                            elif (len(overlaps) == 1):
+                                s_start, s_end = slc.get_slice_indices()
+                                o_start, o_end = overlaps[0].get_slice_indices()
+                                if (s_start == o_start) and (s_end == o_end):
+                                    interval_1 = slc.get_interval()
+                                    interval_2 = overlaps[0].get_interval()
+                                    intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+                            
+                                    if (intersect_interval == None): # check if there is actually any intersection
+                                        return True
+                                    
+                                
+                                else: # slicing
+                                    if (is_empty_intersect_sub_slice(slc, overlaps[0]) == True):
+                                        return True
+                                    
+
+                            else:
+                                for overlap in overlaps:
+                                    if (is_empty_intersect_sub_slice(slc, overlap) == True):
+                                        return True
+
+                        return False
+                    
+                else: # the lengths are NOT the same
+                    # intersect of two bit-strings with different lengths will be empty!
+                    # Since they are technichally diffrent types
+                    return True
+
+
+            case TYPE.TypesEnum.STRUCT:
+                if (_type_1.has_the_same_fields_as(_type_2)):
+                    result = False
+                    for name, fld in _type_1.get_fields():
+                        result = result or is_type_intersect_empty(fld, _type_2.get_field(name))
+                    return result
+                else:
+                    # intersect of two two structs with different fields will be empty!
+                    return True
+
+            case TYPE.TypesEnum.HEADER:
+                if (_type_1.has_the_same_fields_as(_type_2)):
+                    result = False
+                    for name, fld in _type_1.get_fields():
+                        result = result or is_type_intersect_empty(fld, _type_2.get_field(name))
+                    return result
+                else:
+                    # intersect of two two headers with different fields will be empty!
+                    return True
+
+
+###### helper ######
+def is_empty_intersect_sub_slice(_slc, _overlap):
+    s_start, s_end = _slc.get_slice_indices()
+    o_start, o_end = _overlap.get_slice_indices()
+
+    if o_start > s_start:
+        start = o_start-1
+        _, start_split_slc = _slc.split(start)
+        _, start_split_overlap = _overlap.split(0)
+    else:
+        start = s_start-1
+        _, start_split_slc = _slc.split(0)
+        _, start_split_overlap = _overlap.split(start)
+
+    if o_end > s_end:
+        end = s_end - start
+        end_split_slc = start_split_slc
+        end_split_overlap, _ = start_split_overlap.split(end)
+    else:
+        end = o_end - start
+        end_split_slc, _ = start_split_slc.split(end)
+        end_split_overlap = start_split_overlap
+
+    interval_1 = end_split_slc.get_interval()
+    interval_2 = end_split_overlap.get_interval()
+    intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+
+    # print("-"*20)
+    # print(interval_1, interval_2, intersect_interval)
+
+    if (intersect_interval == None): # check if there is actually any intersection
+        return True
+    
+    return False
+
+
+############################################################
+############# GET INTERVAL INTERSET $\cap$ #################
+############################################################
+# def intersect_Gammas(_Gamma_list):
+#     result = []
+#     for i in range(len(_Gamma_list)):
+#         for j in range(len(_Gamma_list)):
+#             if (i != j):
+#                 (gg_1, gg_2) = intersect_gamma(_Gamma_list[i][0], _Gamma_list[j][0])
+#                 if (gg_1 != None) and (gg_2 != None):
+#                     (gl_1, gl_2) = intersect_gamma(_Gamma_list[i][1], _Gamma_list[j][1])
+#                     if (gl_1 != None) and (gl_2 != None):
+#                         result.append((gg_1, gl_1)) # to avoid duplication, just the first gammas are added
+#                     else:
+#                         return []
+#                 else:
+#                     return [] 
+
+#     return result
+            
+# def intersect_gamma(_gamma_1, _gamma_2):
+#     if not (_gamma_1.has_same_domain_as(_gamma_2)):
+#         LOGGER.error("Cannot intersect two gammas with different domains!")
+#     else:
+#         cp_gamma_1 = copy.deepcopy(_gamma_1)
+#         cp_gamma_2 = copy.deepcopy(_gamma_2)
+#         for lval in cp_gamma_1.get_keys():
+#             type_1 = cp_gamma_1.get(lval)
+#             type_2 = cp_gamma_2.get(lval)
+#             t1, t2 = intersect_type(type_1, type_2)
+#             if (t1 != None) and (t2 != None):
+#                 cp_gamma_1.update(lval, t1)
+#                 cp_gamma_2.update(lval, t2)
+#             else:
+#                 return (None, None)
+
+#         return (cp_gamma_1, cp_gamma_2)
+
+# def intersect_type(_type_1, _type_2):
+#     if (_type_1.get_type() != _type_2.get_type()):
+#         LOGGER.warning("intersect of " + str(_type_1.get_type()) + " and " + str(_type_2.get_type()) + " will be empty!")
+#         return (None, None)
+#     else:
+#         match _type_1.get_type():
+#             case TYPE.TypesEnum.BOOL:
+#                 interval_1 = _type_1.get_interval()
+#                 interval_2 = _type_2.get_interval()
+#                 intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+#                 if (intersect_interval != None):
+#                     _type_1.set_interval(intersect_interval)
+#                     _type_2.set_interval(intersect_interval)
+#                     return(_type_1, _type_2)
+#                 else:
+#                     return (None, None)
+
+#             case TYPE.TypesEnum.BIT_STRING:
+#                 if (_type_1.get_size() == _type_2.get_size()): # the lengths are the same
+#                     if (_type_1.has_same_slices_as(_type_2)):
+#                         for i, slc in enumerate(_type_1.get_slices()):
+#                             interval_1 = slc.get_interval()
+#                             interval_2 = _type_2.get_slice(i).get_interval()
+#                             intersect_interval = INTERVAL.intersect(interval_1, interval_2)
+                            
+#                             if (intersect_interval == None): # check if there is actually any intersection
+#                                 return (None, None)
+#                             slc.set_interval(intersect_interval)
+#                             _type_2.get_slice(i).set_interval(intersect_interval)
+
+#                         return(_type_1, _type_2)
+#                     else:
+#                         LOGGER.warning("intersect of two bit-strings with different slices is highly overapproximating!")
+#                         size = _type_1.get_size()
+#                         intersect_interval = INTERVAL.Interval(0, ((2 ** size) - 1), size)
+#                         if (intersect_interval == None): # check if there is actually any intersection
+#                             return (None, None)
+                        
+#                         label_1 = _type_1.get_label()
+#                         slice_1 = TYPE.Slice(0, size-1, intersect_interval, label_1)
+#                         _type_1.update_slices([slice_1])
+
+#                         label_2 = _type_2.get_label()
+#                         slice_2 = TYPE.Slice(0, size-1, intersect_interval, label_2)
+#                         _type_2.update_slices([slice_2])
+
+#                         return(_type_1, _type_2)
+#                 else: # the lengths are NOT the same
+#                     LOGGER.warning("intersect of two bit-strings with different lengths will be empty!")
+#                     return (None, None)
+
+
+#             case TYPE.TypesEnum.STRUCT:
+#                 if (_type_1.has_the_same_fields_as(_type_2)):
+#                     for name, fld in _type_1.get_fields():
+#                         join_type(fld, _type_2.get_field(name))
+#                 else:
+#                     LOGGER.warning("intersect of two two structs with different fields will be empty!")
+#                     return (None, None)
+
+#             case TYPE.TypesEnum.HEADER:
+#                 if (_type_1.has_the_same_fields_as(_type_2)):
+#                     for name, fld in _type_1.get_fields():
+#                         join_type(fld, _type_2.get_field(name))
+#                 else:
+#                     LOGGER.warning("intersect of two two headers with different fields will be empty!")
+#                     return (None, None)
+
+############################################################
+###################### Ordering ⊑ ##########################
+############################################################
+def is_below(_gamma_left, _gamma_right):
+    gamma_left = _gamma_left.project(_gamma_right.get_keys())
+
+    if not (_gamma_right.has_same_domain_as(gamma_left)):
+        LOGGER.warning("cannot check gamma_g ⊑ gamma_o -- there are some variables in \"gamma_o\" that are not in \"gamma_g\"!")
+        return False
+    else:
+        for lval in gamma_left.get_keys():
+            type_left = gamma_left.get(lval)
+            type_right = _gamma_right.get(lval)
+            if not is_type_below(type_left, type_right):
+                return False
+
+        return True
+
+def is_type_below(_type_left, _type_right):
+    if (_type_left.get_type() != _type_right.get_type()):
+        return _type_left.get_label().is_below(_type_right.get_label())
+    else:
+        match _type_left.get_type():
+            case TYPE.TypesEnum.BOOL:
+                return _type_left.get_label().is_below(_type_right.get_label())
+
+            case TYPE.TypesEnum.BIT_STRING:
+                if (_type_left.get_size() == _type_right.get_size()): # the lengths are the same
+                    if (_type_left.has_same_slices_as(_type_right)):
+                        for i, slc in enumerate(_type_left.get_slices()):
+                            lebel_left = slc.get_label()
+                            lebel_right = _type_right.get_slice(i).get_label()
+                            
+                            if (not lebel_left.is_below(lebel_right)): 
+                                return False
+
+                        return True
+                    
+                    else:
+                        for i, slc in enumerate(_type_left.get_slices()):
+                            overlaps = _type_right.get_overlapping_slices(slc)
+
+                            if (len(overlaps) <= 0):
+                                return False
+                            else:
+                                for overlap in overlaps:
+                                    if (not slc.get_label().is_below(overlap.get_label())):
+                                        return False
+
+                        return True
+                    
+                else: # the lengths are NOT the same
+                    return _type_left.get_label().is_below(_type_right.get_label())
+
+
+            case TYPE.TypesEnum.STRUCT:
+                if (_type_left.has_the_same_fields_as(_type_right)):
+                    result = True
+                    for name, fld in _type_left.get_fields():
+                        result = result and is_type_below(fld, _type_right.get_field(name))
+                    return result
+                else:
+                    return _type_left.get_label().is_below(_type_right.get_label())
+
+            case TYPE.TypesEnum.HEADER:
+                if (_type_left.has_the_same_fields_as(_type_right)):
+                    result = True
+                    for name, fld in _type_left.get_fields():
+                        result = result and is_type_below(fld, _type_right.get_field(name))
+                    return result
+                else:
+                    return _type_left.get_label().is_below(_type_right.get_label())
+
+
+############################################################
+#################### Prune Invalid #########################
+############################################################
+def prune_invalid_gammas(_Gamma):
+    result_Gamma = []
+    for gamma in _Gamma:
+        if (type(gamma) is tuple): # it's a tuple of (gg, gl)
+            gg = gamma[0]
+            gl = gamma[1]
+            if (gg.is_valid() and gl.is_valid()):
+                result_Gamma.append((gg,gl))
+        else:
+            if (gamma.is_valid()):
+                result_Gamma.append(gamma)
+
+    return result_Gamma
+
+############################################################
+###################### Invalidate ##########################
+############################################################
+def invalidate_gammas(_Gamma):
+    result_Gamma = []
+    for gamma in _Gamma:
+        if (type(gamma) is tuple): # it's a tuple of (gg, gl)
+            gg = gamma[0]
+            gg.invalidate()
+            gl = gamma[1]
+            gl.invalidate()
+            result_Gamma.append((gg, gl))
+        else:
+            result_Gamma.append(gamma.invalidate())
+
+    return result_Gamma
+
+
+############################################################
+################### Union of gammas ########################
+############################################################
 def union(_gamma_1, _gamma_2):
     for var in _gamma_1.get_keys():
         if _gamma_2.exists(var) and _gamma_2.get(var).get_type() != _gamma_1.get(var).get_type():
@@ -355,114 +756,3 @@ def union(_gamma_1, _gamma_2):
         for var in _gamma_2.get_keys():
             if not _gamma_1.exists(var):
                 _gamma_1.add(var, _gamma_2.get(var))
-
-
-
-
-############################################################
-############### INTERVAL INTERSET $\cap$ ###################
-############################################################
-def intersect_Gammas(_Gamma_list):
-    result = []
-    for i in range(len(_Gamma_list)):
-        for j in range(len(_Gamma_list)):
-            if (i != j):
-                (gg_1, gg_2) = intersect_gamma(_Gamma_list[i][0], _Gamma_list[j][0])
-                if (gg_1 != None) and (gg_2 != None):
-                    (gl_1, gl_2) = intersect_gamma(_Gamma_list[i][1], _Gamma_list[j][1])
-                    if (gl_1 != None) and (gl_2 != None):
-                        result.append((gg_1, gl_1)) # to avoid duplication, just the first gammas are added
-                    else:
-                        return []
-                else:
-                    return [] 
-
-    return result
-            
-
-def intersect_gamma(_gamma_1, _gamma_2):
-    if not (_gamma_1.has_same_domain_as(_gamma_2)):
-        LOGGER.error("Cannot intersect two gammas with different domains!")
-    else:
-        cp_gamma_1 = copy.deepcopy(_gamma_1)
-        cp_gamma_2 = copy.deepcopy(_gamma_2)
-        for lval in cp_gamma_1.get_keys():
-            type_1 = cp_gamma_1.get(lval)
-            type_2 = cp_gamma_2.get(lval)
-            t1, t2 = intersect_type(type_1, type_2)
-            if (t1 != None) and (t2 != None):
-                cp_gamma_1.update(lval, t1)
-                cp_gamma_2.update(lval, t2)
-            else:
-                return (None, None)
-
-        return (cp_gamma_1, cp_gamma_2)
-
-
-def intersect_type(_type_1, _type_2):
-    if (_type_1.get_type() != _type_2.get_type()):
-        LOGGER.warning("intersect of " + str(_type_1.get_type()) + " and " + str(_type_2.get_type()) + " will be empty!")
-        return (None, None)
-    else:
-        match _type_1.get_type():
-            case TYPE.TypesEnum.BOOL:
-                interval_1 = _type_1.get_interval()
-                interval_2 = _type_2.get_interval()
-                intersect_interval = INTERVAL.intersect(interval_1, interval_2)
-                if (intersect_interval != None):
-                    _type_1.set_interval(intersect_interval)
-                    _type_2.set_interval(intersect_interval)
-                    return(_type_1, _type_2)
-                else:
-                    return (None, None)
-
-            case TYPE.TypesEnum.BIT_STRING:
-                if (_type_1.get_size() == _type_2.get_size()): # the lengths are the same
-                    if (_type_1.has_same_slices_as(_type_2)):
-                        for i, slc in enumerate(_type_1.get_slices()):
-                            interval_1 = slc.get_interval()
-                            interval_2 = _type_2.get_slice(i).get_interval()
-                            intersect_interval = INTERVAL.intersect(interval_1, interval_2)
-                            
-                            if (intersect_interval == None): # check if there is actually any intersection
-                                return (None, None)
-                            slc.set_interval(intersect_interval)
-                            _type_2.get_slice(i).set_interval(intersect_interval)
-
-                        return(_type_1, _type_2)
-                    else:
-                        LOGGER.warning("intersect of two bit-strings with different slices is highly overapproximating!")
-                        size = _type_1.get_size()
-                        intersect_interval = INTERVAL.Interval(0, ((2 ** size) - 1), size)
-                        if (intersect_interval == None): # check if there is actually any intersection
-                            return (None, None)
-                        
-                        label_1 = _type_1.get_label()
-                        slice_1 = TYPE.Slice(0, size-1, intersect_interval, label_1)
-                        _type_1.update_slices([slice_1])
-
-                        label_2 = _type_2.get_label()
-                        slice_2 = TYPE.Slice(0, size-1, intersect_interval, label_2)
-                        _type_2.update_slices([slice_2])
-
-                        return(_type_1, _type_2)
-                else: # the lengths are NOT the same
-                    LOGGER.warning("intersect of two bit-strings with different lengths will be empty!")
-                    return (None, None)
-
-
-            case TYPE.TypesEnum.STRUCT:
-                if (_type_1.has_the_same_fields_as(_type_2)):
-                    for name, fld in _type_1.get_fields():
-                        join_type(fld, _type_2.get_field(name))
-                else:
-                    LOGGER.warning("intersect of two two structs with different fields will be empty!")
-                    return (None, None)
-
-            case TYPE.TypesEnum.HEADER:
-                if (_type_1.has_the_same_fields_as(_type_2)):
-                    for name, fld in _type_1.get_fields():
-                        join_type(fld, _type_2.get_field(name))
-                else:
-                    LOGGER.warning("intersect of two two headers with different fields will be empty!")
-                    return (None, None)

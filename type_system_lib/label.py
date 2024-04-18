@@ -18,6 +18,12 @@ class Low(Lattice):
     def is_low(self):
         return True
 
+    def is_below(self, _other_label):
+        if _other_label.is_high():
+            return False
+        else:
+            return True
+
     def __str__(self):
         return "LOW"
 
@@ -33,6 +39,12 @@ class High(Lattice):
         return True
     def is_low(self):
         return False
+
+    def is_below(self, _other_label):
+        if _other_label.is_low():
+            return False
+        else:
+            return True
 
     def __str__(self):
         return "HIGH"

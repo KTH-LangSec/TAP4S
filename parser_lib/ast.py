@@ -50,6 +50,9 @@ class Main(Statement):
         self.arch = _arch
         self.body = list(_body)
 
+    def get_body(self):
+        return self.body
+
     def __str__(self):
         return "< main \"" + str(self.arch) + "\" with BODY: " + str(self.body) + " >"
 
@@ -139,7 +142,7 @@ class Extract(Statement):
         return self.argument
 
     def __str__(self):
-        return "< extract call with PACKET IN: " + str(self.packet_in) + " and ARGUMENT: " + str(self.self.argument) + " >"
+        return "< extract call with PACKET IN: " + str(self.packet_in) + " and ARGUMENT: " + str(self.argument) + " >"
 
 ##############
 class Emit(Statement):
@@ -159,7 +162,7 @@ class Emit(Statement):
         return self.argument
 
     def __str__(self):
-        return "< emit call with PACKET OUT: " + str(self.packet_out) + " and ARGUMENT: " + str(self.self.argument) + " >"
+        return "< emit call with PACKET OUT: " + str(self.packet_out) + " and ARGUMENT: " + str(self.argument) + " >"
 
 
 ##############
@@ -473,7 +476,7 @@ class ConstantDeclaration(Statement):
         super().__init__(StatementsEnum.CONSTANT_DECLARATION) 
         self.type = _type
         self.variable = _var
-        self.value = _value
+        self.value = _value.get_value()
 
     def get_variable(self):
         return self.variable

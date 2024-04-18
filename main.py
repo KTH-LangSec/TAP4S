@@ -1,6 +1,4 @@
-from lark import Lark
 import argparse
-import pprint
 import copy
 
 import type_system_lib as TS
@@ -8,15 +6,12 @@ import type_system_lib.label as LATIICE
 import type_system_lib.gamma as GM
 import logger as LOGGER
 import parser_lib.lval as LVAL
-import parser_lib.transformer as TRANSFORMER
 import type_system_lib.mapping as MP
 import policy_parser as POLICIY
 import contract_parser as CONTRACT
 import type_system_lib.types as TYPE
-
-##################################################
-GRAMMAR_FILE = "grammar.lark"
-##################################################
+import parser_lib as PARSER
+import type_system_lib.security_condition as SECURITY
 
 
 if __name__ == '__main__':
@@ -36,22 +31,15 @@ if __name__ == '__main__':
             input_program = file.read()
     else:
         print()
-        print(">>> Please provide the address of the source code")
-        print()
         arg_parser.print_help()
-        exit(0)
+        print()
+        LOGGER.error("Please provide an input program!")
 
-    with open(GRAMMAR_FILE, 'r') as file:
-        grammar = file.read()
-
-    parser = Lark(grammar,parser="lalr")
-    parse_tree = parser.parse(input_program)
-    ast = TRANSFORMER.P4Transformer().transform(parse_tree)
-    ast_lst = list(ast)
+    ast = PARSER.parse(input_program)
 
 
     #############################################
-    ################## Policy ###################
+    ################ Policy In ##################
     #############################################
     if args.p:
         with open(args.p, 'r') as file:
@@ -60,9 +48,32 @@ if __name__ == '__main__':
     else:
         LOGGER.warning("no input policy was provided!")
         policy_in_list = []
-        #default_policy = "packet: (0,6) -> ([*], low); (7,13) -> ([*], low); x: (0,2) -> ([1,2], low); | packet: (0,13) -> ([*], high);"
+        #default_policy = "Ipacket: (0,120) -> ([0,0], low);"
         #policy_in_list = POLICIY.parse(default_policy)
 
+    #############################################
+    ################ Policy Out ##################
+    #############################################
+    if args.o:
+        with open(args.o, 'r') as file:
+            file_contents = file.read()
+        policy_out_list = POLICIY.parse(file_contents)
+    else:
+        LOGGER.warning("no output policy was provided!")
+        policy_out_list = []
+
+    Gamma_o = []
+    if (len(policy_out_list) != 0):
+        for policy in policy_out_list:
+            gamma_o = GM.GlobalGamma()
+
+            for lval_policy in policy.get_lval_policies():
+                lval = lval_policy.get_lval()
+                bs_type = lval_policy.get_bit_string()
+                gamma_o.add(lval, bs_type)
+
+            Gamma_o.append(gamma_o)
+            
     #############################################
     ################# Contract ##################
     #############################################
@@ -74,7 +85,6 @@ if __name__ == '__main__':
         LOGGER.warning("no contract file was provided!")
         contracts_list = []
 
-    # TODO parse output policy
     C = MP.Contracts()
     if (len(contracts_list) != 0):
         for cont in contracts_list:
@@ -86,7 +96,7 @@ if __name__ == '__main__':
     #############################################
     ################## Gamma ####################
     #############################################
-    B_g, gamma_g_init = TS.pre_proccess(ast_lst)
+    B_g, gamma_g_init = TS.pre_proccess(ast)
     Gamma_g_init = []
 
     ########## adding policy to gamma_init
@@ -120,15 +130,35 @@ if __name__ == '__main__':
     else:
         Gamma_g_init.append(gamma_g_init)
 
+
+    #############################################
+    ################ Main Body ##################
+    #############################################
+    main_ast = TS.get_main_body(ast)
+
+
+    #############################################
+    ############### Type Check ##################
+    #############################################
     final_Gamma = []
     for gamma_g_init_with_policy in Gamma_g_init:
-        Gamma = TS.type_check_ast(ast_lst, gamma_g_init_with_policy, GM.LocalGamma(), LATIICE.Low(), B_g, MP.Local_B() , C)
+        Gamma = TS.type_check_ast(main_ast, gamma_g_init_with_policy, GM.LocalGamma(), LATIICE.Low(), B_g, MP.Local_B() , C)
         final_Gamma.extend(Gamma)
+
+
+    pruned_Gamma = GM.prune_invalid_gammas(final_Gamma)
+    Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
     print()
     for i, (gg, gl) in enumerate(final_Gamma):
         print("########## final gamma " + str(i+1) + ":")
         print(gg)
+        # print(gg.get(LVAL.Variable("Opacket")))
+
+    #############################################
+    ############## Security Check ###############
+    #############################################
+    #verdict = SECURITY.check(Gamma_g, Gamma_o)
 
     # u_gamma = GM.intersect_Gammas(final_Gamma)
     # for i, (gg, gl) in enumerate(u_gamma):

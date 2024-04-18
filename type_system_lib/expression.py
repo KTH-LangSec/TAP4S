@@ -30,6 +30,7 @@ def type_check_expression(_exp, _gamma_g, _gamma_l):
                 if (lower > 0):
                     temp_type.consume_sub_string(lower)
                 slice_type = temp_type.consume_sub_string(upper-lower+1)
+
                 return slice_type
             else:
                 LOGGER.error("slicing is only supported for bit-strings!")
@@ -71,9 +72,20 @@ def type_check_expression(_exp, _gamma_g, _gamma_l):
                 return unary_bool(_exp.get_op(), rhs)
 
 
+##################################################################
+############################# Sat ################################
+##################################################################
+def is_sat(_gamma_g, _gamma_l, _exp):
+    exp_type = type_check_expression(_exp, _gamma_g, _gamma_l)
+
+    if (exp_type.is_false()):
+        return False
+    else:
+        return True
+
 
 ##################################################################
-######################## HELPER FUNCTIONS ########################
+########################## Operations ############################
 ##################################################################
 def binary_bool2bool(_op, _lhs, _rhs):
     interval = convert_binary_bool2bool(_op, _lhs.get_interval(), _rhs.get_interval())
@@ -91,6 +103,7 @@ def convert_binary_bool2bool(_op, _lhs_interval, _rhs_interval):
         case "!=":
             return INTERVAL.bool_not_equal_operation(_lhs_interval, _rhs_interval)
 
+
 ##################################################################
 def binary_bs2bs(_op, _lhs, _rhs):
     if (_lhs.get_size() == _rhs.get_size()): # check that the length of both sides should be equal
@@ -100,9 +113,9 @@ def binary_bs2bs(_op, _lhs, _rhs):
             label = LABEL.lup(_lhs.get_slice(0).get_label(), _rhs.get_slice(0).get_label())
             return TYPE.BitString(size, _label=label, _interval=interval)
         else:
-            LOGGER.error("We do not support binary operations on bit-strings with more than ONE slice!")
+            LOGGER.error("we do not support binary operations on bit-strings with more than ONE slice!")
     else:
-        LOGGER.error("The size of the expressions doesn't match!")
+        LOGGER.error("the size of the expressions doesn't match!")
 
 
 def convert_binary_bs2bs(_op, _lhs_interval, _rhs_interval, _slice_lhs, _slice_rhs):
@@ -122,16 +135,16 @@ def binary_bs2bool(_op, _lhs, _rhs):
             label = LABEL.lup(_lhs.get_slice(0).get_label(), _rhs.get_slice(0).get_label())
             return TYPE.Bool(_label=label, _interval=interval)
         else:
-            LOGGER.error("We do not support binary operations on bit-strings with more than ONE slice!")
+            LOGGER.error("we do not support binary operations on bit-strings with more than ONE slice!")
     else:
-        LOGGER.error("The size of the expressions doesn't match!")
+        LOGGER.error("the size of the expressions doesn't match!")
 
 def convert_binary_bs2bool(_op, _lhs_interval, _rhs_interval):
     match _op:
         case "&&": # TODO: implement
-            LOGGER.error(" && operator for bit-strings is not supported!")
+            LOGGER.error("&& operator for bit-strings is not supported!")
         case "||": # TODO: implement
-            LOGGER.error(" || operator for bit-strings is not supported!")
+            LOGGER.error("|| operator for bit-strings is not supported!")
         case "==":
             return INTERVAL.equal_operation(_lhs_interval, _rhs_interval)
         case "!=":
@@ -163,38 +176,20 @@ def unary_bs(_op, _rhs):
         interval = convert_unary_bs(_op, _rhs.get_slice(0).get_interval())
         return TYPE.Bool(_label=_rhs.get_slice(0).get_label(), _interval=interval)
     else:
-        LOGGER.error("We do not support unary operations on bit-strings with more than ONE slice!")
+        LOGGER.error("we do not support unary operations on bit-strings with more than ONE slice!")
 
 def convert_unary_bs(_op, _rhs_interval):
     match _op:
         case "!": # TODO: implement
-            LOGGER.warning(" ! is not implemented yet!")
+            LOGGER.error("! operator for bit-strings is not supported!")
 
 
 
 ###################################################################################
-################################### REFINEMENT ####################################
+################################### Refinement ####################################
 ###################################################################################
 def refine_expression(_exp, _gamma_g, _gamma_l):
     match _exp.get_type():
-        # case LVAL.LvalEnum.VARIABLE:
-        #     return type_check_expression(_exp, _gamma_g, _gamma_l)
-
-        # case LVAL.LvalEnum.ACCESS:
-        #     return type_check_expression(_exp, _gamma_g, _gamma_l)
-
-        # case LVAL.LvalEnum.SLICE:
-        #     LOGGER.error("refine_expression for slice is not implementet!")
-
-        # case P_EXP.ExpressionEnum.HEX:
-        #     return type_check_expression(_exp, _gamma_g, _gamma_l)
-
-        # case P_EXP.ExpressionEnum.UNSIGNED:
-        #     return type_check_expression(_exp, _gamma_g, _gamma_l)
-
-        # case P_EXP.ExpressionEnum.BOOLEAN:
-        #     return type_check_expression(_exp, _gamma_g, _gamma_l)
-
         case P_EXP.ExpressionEnum.BINARY:
             return refine_binary_expression(_exp, _gamma_g, _gamma_l)
 
@@ -264,14 +259,16 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
 
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
+            
+            index = find_slice_index(_lhs, left_type)
 
             new_min = right_type.get_slice(0).get_interval().get_max() + 1
             size = right_type.get_slice(0).get_interval().get_size()
-            new_interval = INTERVAL.Interval(new_min, left_type.get_slice(0).get_interval().get_max(), size)
+            new_interval = INTERVAL.Interval(new_min, left_type.get_slice(index).get_interval().get_max(), size)
 
             if (new_interval.is_valid()):
-                label = left_type.get_slice(0).get_label()
-                size = left_type.get_size()
+                label = left_type.get_slice(index).get_label()
+                size = left_type.get_slice(index).get_size()
                 new_left_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
@@ -281,7 +278,7 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_less(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_less_equal(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -290,11 +287,13 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = GM.lookup(_rhs, cp_gamma_g, cp_gamma_l)
 
-            l_min = left_type.get_slice(0).get_interval().get_min()
-            l_max = left_type.get_slice(0).get_interval().get_max()
+            l_index = find_slice_index(_lhs, left_type)
+            l_min = left_type.get_slice(l_index).get_interval().get_min()
+            l_max = left_type.get_slice(l_index).get_interval().get_max()
 
-            r_min = right_type.get_slice(0).get_interval().get_min()
-            r_max = right_type.get_slice(0).get_interval().get_max()
+            r_index = find_slice_index(_rhs, right_type)
+            r_min = right_type.get_slice(r_index).get_interval().get_min()
+            r_max = right_type.get_slice(r_index).get_interval().get_max()
 
             if (l_min < r_min):
                 if (l_max <= r_max):
@@ -323,15 +322,15 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
                     r_min = r_min
                     r_max = r_max
 
-            left_label = left_type.get_slice(0).get_label()
-            left_size = left_type.get_size()
+            left_label = left_type.get_slice(l_index).get_label()
+            left_size = left_type.get_slice(l_index).get_size()
             left_interval = INTERVAL.Interval(l_min, l_max, left_size)
             new_left_type = TYPE.BitString(left_size, _label=left_label, _interval=left_interval)
 
             GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
 
-            right_label = right_type.get_slice(0).get_label()
-            right_size = right_type.get_size()
+            right_label = right_type.get_slice(r_index).get_label()
+            right_size = right_type.get_slice(r_index).get_size()
             right_interval = INTERVAL.Interval(r_min, r_max, right_size)
             new_right_type = TYPE.BitString(right_size, _label=right_label, _interval=right_interval)
 
@@ -350,14 +349,16 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
 
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
+                
+            index = find_slice_index(_lhs, left_type)
 
             new_max = right_type.get_slice(0).get_interval().get_min() - 1
             size = right_type.get_slice(0).get_interval().get_size()
-            new_interval = INTERVAL.Interval(left_type.get_slice(0).get_interval().get_min(), new_max, size)
+            new_interval = INTERVAL.Interval(left_type.get_slice(index).get_interval().get_min(), new_max, size)
 
             if (new_interval.is_valid()):
-                label = left_type.get_slice(0).get_label()
-                size = left_type.get_size()
+                label = left_type.get_slice(index).get_label()
+                size = left_type.get_slice(index).get_size()
                 new_left_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
@@ -367,7 +368,7 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_bigger(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_bigger_equal(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -376,11 +377,13 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = GM.lookup(_rhs, cp_gamma_g, cp_gamma_l)
 
-            l_min = left_type.get_slice(0).get_interval().get_min()
-            l_max = left_type.get_slice(0).get_interval().get_max()
+            l_index = find_slice_index(_lhs, left_type)
+            l_min = left_type.get_slice(l_index).get_interval().get_min()
+            l_max = left_type.get_slice(l_index).get_interval().get_max()
 
-            r_min = right_type.get_slice(0).get_interval().get_min()
-            r_max = right_type.get_slice(0).get_interval().get_max()
+            r_index = find_slice_index(_rhs, right_type)
+            r_min = right_type.get_slice(r_index).get_interval().get_min()
+            r_max = right_type.get_slice(r_index).get_interval().get_max()
 
             if (l_min < r_min):
                 if (l_max <= r_max):
@@ -410,16 +413,16 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
                     r_max = r_max
 
             
-            left_label = left_type.get_slice(0).get_label()
-            left_size = left_type.get_size()
+            left_label = left_type.get_slice(l_index).get_label()
+            left_size = left_type.get_slice(l_index).get_size()
             left_interval = INTERVAL.Interval(l_min, l_max, left_size)
             new_left_type = TYPE.BitString(left_size, _label=left_label, _interval=left_interval)
 
             GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
 
             
-            right_label = right_type.get_slice(0).get_label()
-            right_size = right_type.get_size()
+            right_label = right_type.get_slice(r_index).get_label()
+            right_size = right_type.get_slice(r_index).get_size()
             right_interval = INTERVAL.Interval(r_min, r_max, right_size)
             new_right_type = TYPE.BitString(right_size, _label=right_label, _interval=right_interval)
 
@@ -437,15 +440,18 @@ def refine_equal(_lhs, _rhs, _gamma_g, _gamma_l):
         case -1: # only one variable on the left hand side
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
+                
+            index = find_slice_index(_lhs, left_type)
 
             new_max = right_type.get_slice(0).get_interval().get_max()
             new_min = right_type.get_slice(0).get_interval().get_min()
             size = right_type.get_slice(0).get_interval().get_size()
-
             new_interval = INTERVAL.Interval(new_min, new_max, size)
+
             if (new_interval.is_valid()):
-                label = left_type.get_slice(0).get_label()
-                size = left_type.get_size()
+                label = left_type.get_slice(index).get_label()
+                size = left_type.get_slice(index).get_size()
+
                 new_left_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
@@ -457,15 +463,18 @@ def refine_equal(_lhs, _rhs, _gamma_g, _gamma_l):
         case 1: # only one variable on the right hand side
             right_type = GM.lookup(_rhs, cp_gamma_g, cp_gamma_l)
             left_type = type_check_expression(_lhs, cp_gamma_g, cp_gamma_l)
+                
+            index = find_slice_index(_rhs, right_type)
 
             new_max = left_type.get_slice(0).get_interval().get_max()
             new_min = left_type.get_slice(0).get_interval().get_min()
             size = left_type.get_slice(0).get_interval().get_size()
-
             new_interval = INTERVAL.Interval(new_min, new_max, size)
+
             if (new_interval.is_valid()):
-                label = right_type.get_slice(0).get_label()
-                size = right_type.get_size()
+                label = right_type.get_slice(index).get_label()
+                size = right_type.get_slice(index).get_size()
+
                 new_right_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_rhs, new_right_type, cp_gamma_g, cp_gamma_l)
@@ -476,20 +485,22 @@ def refine_equal(_lhs, _rhs, _gamma_g, _gamma_l):
 
         case _: # variables on both sides
             left_type = type_check_expression(_lhs, cp_gamma_g, cp_gamma_l)
-            lhs_interval = left_type.get_slice(0).get_interval()
+            l_index = find_slice_index(_lhs, left_type)
+            lhs_interval = left_type.get_slice(l_index).get_interval()
 
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
-            rhs_interval = right_type.get_slice(0).get_interval()
+            r_index = find_slice_index(_rhs, right_type)
+            rhs_interval = right_type.get_slice(r_index).get_interval()
 
             intersection = INTERVAL.intersect(lhs_interval, rhs_interval)
             if (intersection != None):
-                left_label = left_type.get_slice(0).get_label()
-                left_size = left_type.get_size()
+                left_label = left_type.get_slice(l_index).get_label()
+                left_size = left_type.get_slice(l_index).get_size()
                 new_left_type = TYPE.BitString(left_size, _label=left_label, _interval=intersection)
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
 
-                right_label = right_type.get_slice(0).get_label()
-                right_size = right_type.get_size()
+                right_label = right_type.get_slice(r_index).get_label()
+                right_size = right_type.get_slice(r_index).get_size()
                 new_right_type = TYPE.BitString(right_size, _label=right_label, _interval=intersection)
                 GM.update(_rhs, new_right_type, cp_gamma_g, cp_gamma_l)
 
@@ -520,15 +531,17 @@ def refine_not_equal(_lhs, _rhs, _gamma_g, _gamma_l):
 
         case _: # variables on both sides
             left_type = type_check_expression(_lhs, _gamma_g, _gamma_l)
-            lhs_interval = left_type.get_slice(0).get_interval()
+            l_index = find_slice_index(_lhs, left_type)
+            lhs_interval = left_type.get_slice(l_index).get_interval()
 
             right_type = type_check_expression(_rhs, _gamma_g, _gamma_l)
-            rhs_interval = right_type.get_slice(0).get_interval()
+            r_index = find_slice_index(_rhs, right_type)
+            rhs_interval = right_type.get_slice(r_index).get_interval()
 
             intersection = INTERVAL.intersect(lhs_interval, rhs_interval)
 
             if (intersection != None) and (intersection.is_singleton()):
-                size = right_type.get_slice(0).get_size()
+                size = right_type.get_slice(r_index).get_size()
 
                 intersections_value = P_EXP.UnsignedNumber(size, intersection.get_min())
 
@@ -554,12 +567,15 @@ def refine_less_equal(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
 
+            index = find_slice_index(_lhs, left_type)
+
             new_max = right_type.get_slice(0).get_interval().get_min()
             size = right_type.get_slice(0).get_interval().get_size()
-            new_interval = INTERVAL.Interval(left_type.get_slice(0).get_interval().get_min(), new_max, size)
+            new_interval = INTERVAL.Interval(left_type.get_slice(index).get_interval().get_min(), new_max, size)
+            
             if (new_interval.is_valid()):
-                label = left_type.get_slice(0).get_label()
-                size = left_type.get_size()
+                label = left_type.get_slice(index).get_label()
+                size = left_type.get_slice(index).get_size()
                 new_left_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
@@ -569,7 +585,7 @@ def refine_less_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_bigger_equal(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_bigger(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -578,11 +594,13 @@ def refine_less_equal(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = GM.lookup(_rhs, cp_gamma_g, cp_gamma_l)
 
-            l_min = left_type.get_slice(0).get_interval().get_min()
-            l_max = left_type.get_slice(0).get_interval().get_max()
+            l_index = find_slice_index(_lhs, left_type)
+            l_min = left_type.get_slice(l_index).get_interval().get_min()
+            l_max = left_type.get_slice(l_index).get_interval().get_max()
 
-            r_min = right_type.get_slice(0).get_interval().get_min()
-            r_max = right_type.get_slice(0).get_interval().get_max()
+            r_index = find_slice_index(_rhs, right_type)
+            r_min = right_type.get_slice(r_index).get_interval().get_min()
+            r_max = right_type.get_slice(r_index).get_interval().get_max()
 
             if (l_min < r_min):
                 if (l_max <= r_max):
@@ -611,15 +629,15 @@ def refine_less_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                     r_min = l_min
                     r_max = r_max
 
-            left_label = left_type.get_slice(0).get_label()
-            left_size = left_type.get_size()
+            left_label = left_type.get_slice(l_index).get_label()
+            left_size = left_type.get_slice(l_index).get_size()
             left_interval = INTERVAL.Interval(l_min, l_max, left_size)
             new_left_type = TYPE.BitString(left_size, _label=left_label, _interval=left_interval)
 
             GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
 
-            right_label = right_type.get_slice(0).get_label()
-            right_size = right_type.get_size()
+            right_label = right_type.get_slice(r_index).get_label()
+            right_size = right_type.get_slice(r_index).get_size()
             right_interval = INTERVAL.Interval(r_min, r_max, right_size)
             new_right_type = TYPE.BitString(right_size, _label=right_label, _interval=right_interval)
 
@@ -638,12 +656,14 @@ def refine_bigger_equal(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = type_check_expression(_rhs, cp_gamma_g, cp_gamma_l)
 
-            new_min = right_type.get_slice(0).get_interval().get_max() + 1
+            index = find_slice_index(_lhs, left_type)
+
+            new_min = right_type.get_slice(0).get_interval().get_max()
             size = right_type.get_slice(0).get_interval().get_size()
-            new_interval = INTERVAL.Interval(new_min, left_type.get_slice(0).get_interval().get_max(), size)
+            new_interval = INTERVAL.Interval(new_min, left_type.get_slice(index).get_interval().get_max(), size)
             if (new_interval.is_valid()):
-                label = left_type.get_slice(0).get_label()
-                size = left_type.get_size()
+                label = left_type.get_slice(index).get_label()
+                size = left_type.get_slice(index).get_size()
                 new_left_type = TYPE.BitString(size, _label=label, _interval=new_interval)
 
                 GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
@@ -653,7 +673,7 @@ def refine_bigger_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_less_equal(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_less(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -662,11 +682,13 @@ def refine_bigger_equal(_lhs, _rhs, _gamma_g, _gamma_l):
             left_type = GM.lookup(_lhs, cp_gamma_g, cp_gamma_l)
             right_type = GM.lookup(_rhs, cp_gamma_g, cp_gamma_l)
 
-            l_min = left_type.get_slice(0).get_interval().get_min()
-            l_max = left_type.get_slice(0).get_interval().get_max()
+            l_index = find_slice_index(_lhs, left_type)
+            l_min = left_type.get_slice(l_index).get_interval().get_min()
+            l_max = left_type.get_slice(l_index).get_interval().get_max()
 
-            r_min = right_type.get_slice(0).get_interval().get_min()
-            r_max = right_type.get_slice(0).get_interval().get_max()
+            r_index = find_slice_index(_rhs, right_type)
+            r_min = right_type.get_slice(r_index).get_interval().get_min()
+            r_max = right_type.get_slice(r_index).get_interval().get_max()
 
             if (l_min < r_min):
                 if (l_max <= r_max):
@@ -695,15 +717,15 @@ def refine_bigger_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                     r_min = r_min
                     r_max = r_max
 
-            left_label = left_type.get_slice(0).get_label()
-            left_size = left_type.get_size()
+            left_label = left_type.get_slice(l_index).get_label()
+            left_size = left_type.get_slice(l_index).get_size()
             left_interval = INTERVAL.Interval(l_min, l_max, left_size)
             new_left_type = TYPE.BitString(left_size, _label=left_label, _interval=left_interval)
 
             GM.update(_lhs, new_left_type, cp_gamma_g, cp_gamma_l)
 
-            right_label = right_type.get_slice(0).get_label()
-            right_size = right_type.get_size()
+            right_label = right_type.get_slice(r_index).get_label()
+            right_size = right_type.get_slice(r_index).get_size()
             right_interval = INTERVAL.Interval(r_min, r_max, right_size)
             new_right_type = TYPE.BitString(right_size, _label=right_label, _interval=right_interval)
 
@@ -883,3 +905,16 @@ def refine_bool_not_equal(_lhs, _rhs, _gamma_g, _gamma_l):
         case _: # variables on both sides
             # TODO: implement
             LOGGER.error("TODO: variables on both sides")
+
+
+####################### HELPER #########################
+def find_slice_index(_exp, _type):
+    if (len(_type.get_slices()) > 1): # the _exp was slicing
+        lower = _exp.get_lower_index()
+        upper = _exp.get_upper_index()
+        for i, slc in enumerate(_type.get_slices()):
+            start, end = slc.get_slice_indices()
+            if ((start == lower) and (end == upper)):
+                return i
+    else:
+        return 0

@@ -1,6 +1,7 @@
 import parser_lib.ast as AST
 import parser_lib.types as Ptypes
 import parser_lib.expression as Pexp
+import parser_lib.lval as LVAL
 import type_system_lib.gamma as GM
 import type_system_lib.mapping as MP
 import type_system_lib.types as TYPE
@@ -13,6 +14,7 @@ import setting
 
 DEFINED_TYPES = {} # defined types, structs, headers, and input/output policy
 
+################################################
 def pre_proccess(_ast):
     get_defined_types(_ast)
 
@@ -20,7 +22,16 @@ def pre_proccess(_ast):
     gamma = generate_gamma(_ast, _global=True)
     return B_g, gamma
 
+################################################
+def get_main_body(_ast):
+    for stm in _ast:
+        if stm.get_node_type() == AST.StatementsEnum.MAIN:
+            return stm.get_body()
 
+    LOGGER.warning("main body not found!")
+    return _ast
+
+################################################
 def type_check_ast(_ast, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
     Gamma = [(_gamma_g, _gamma_l)]
     for stm in _ast:
@@ -33,7 +44,7 @@ def type_check_ast(_ast, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
     return Gamma
 
-
+################################################
 def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
     match _stm.get_node_type():
         ################################################
@@ -86,6 +97,24 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
                 return Gamma_f
 
+            elif (f_name == "isValid"):
+                if (len(f_args) == 2):
+                    return_var = f_args[0]
+                    header_in =  f_args[1]
+
+                    header_type = GM.lookup(header_in, _gamma_g, _gamma_l)
+
+                    if (header_type.get_type() == TYPE.TypesEnum.HEADER) and (header_type.get_validity() == True):
+                        # TODO what should the LABEL be?
+                        GM.update(return_var, TYPE.Bool(_value=1, _label=LATTICE.Low()), _gamma_g, _gamma_l)
+                    else:
+                        GM.update(return_var, TYPE.Bool(_value=0, _label=LATTICE.Low()), _gamma_g, _gamma_l)
+
+                else:
+                    LOGGER.error("\"isValid\" needs two arguments: a boolean variable and a header!")
+
+                return [(_gamma_g, _gamma_l)]
+
             else:
                 LOGGER.error("Cannot find the definition of \"" + str(f_name) + "\"!")
 
@@ -100,14 +129,14 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             Gamma_f = [] 
             
             #### Gamma 1
-            ref_gamma_1 = GM.refine(_gamma_g, _gamma_l, exp)
+            ref_gamma_1 = GM.refine(_gamma_g, _gamma_l, exp, pc_prime)
             if (ref_gamma_1 != None):
                 for (ref_gamma_g_e, ref_gamma_l_e) in ref_gamma_1:
                     Gamma_1 = type_check_ast(_stm.get_then_body(), ref_gamma_g_e, ref_gamma_l_e, pc_prime, _B_g, _B_l, _C)
                     Gamma_f.extend(Gamma_1)
 
             #### Gamma 2
-            ref_gamma_2 = GM.refine(_gamma_g, _gamma_l, Pexp.negate(exp))
+            ref_gamma_2 = GM.refine(_gamma_g, _gamma_l, Pexp.negate(exp), pc_prime)
             if (ref_gamma_2 != None):
                 for (ref_gamma_g_ne, ref_gamma_l_ne) in ref_gamma_2:
                     Gamma_2 = type_check_ast(_stm.get_else_body(), ref_gamma_g_ne, ref_gamma_l_ne, pc_prime, _B_g, _B_l, _C)
@@ -131,6 +160,12 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
 
             new_arg_type = bs_to_struct(arg_type_bs, arg_type)
 
+            # updating the validity bit
+            new_arg_type.set_validity(True);
+
+            # raising the label to pc
+            new_arg_type.raise_label(_pc)
+            
             GM.update(packet_in, new_p_type, _gamma_g, _gamma_l)
             GM.update(argument, new_arg_type, _gamma_g, _gamma_l)
 
@@ -151,6 +186,8 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                     slices = packet_out_type.get_slices()
 
                     tmp_type = convert_to_bs(arg_type)
+                    tmp_type.raise_label(_pc) # raising the label to pc
+
                     size += tmp_type.get_size()
                     slices.extend(tmp_type.get_slices())
 
@@ -158,6 +195,8 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                     
                 case TYPE.TypesEnum.OUTPUT_PACKET: # first emit, just generate a bit-string type
                     bs_type = convert_to_bs(arg_type)
+                    bs_type.raise_label(_pc) # raising the label to pc
+                    
 
             GM.update(packet_out, bs_type, _gamma_g, _gamma_l)
 
@@ -185,6 +224,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             p_body, p_params, p_type = _B_g.get(p_name)
 
             B_l = generate_B_mapping(p_body, _global=False)
+
             start_state_body, _, _ = B_l.get("start")
 
             return parser_call(_gamma_g, _gamma_l, _pc, _B_g, B_l, _C, p_args, start_state_body, p_params)
@@ -192,47 +232,50 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
         ################################################
         case AST.StatementsEnum.TRANSITION:
             exp = _stm.get_expression()
-            exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
-            l = exp_type.get_label()
-            pc_prime = LATTICE.lup(_pc, l)
+            if (exp != None):
+                exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
+                l = exp_type.get_label()
+                pc_prime = LATTICE.lup(_pc, l)
 
-            values = []
-            states = []
+                values = []
+                states = []
 
-            value_state_list = _stm.get_states()
-            if (value_state_list != None):
-                for value_state in _stm.get_states():
-                    values.append(value_state.get_value())
-                    states.append(value_state.get_state())
+                value_state_list = _stm.get_states()
+                if (value_state_list != None):
+                    for value_state in _stm.get_states():
+                        value = value_state.get_value()
+                        if value.get_type() == LVAL.LvalEnum.VARIABLE:
+                            constant_value_type = EXP.type_check_expression(value, _gamma_g, _gamma_l)
+                            value_int = constant_value_type.get_slice(0).get_interval().get_min() # since lval refers to a constant, it is a value, hence max or min of the interval will have the same value.
+                            value = Pexp.UnsignedNumber(constant_value_type.get_size(), value_int)
+                        values.append(value)
+                        states.append(value_state.get_state())
 
-            ref_Gamma = GM.refine_trans(_gamma_g, _gamma_l, exp, values)
-            default_state = _stm.get_default_state()
 
-            if (len(ref_Gamma) == 1): # there is only a default state
-                ref_gamma_g, ref_gamma_l = ref_Gamma[0]
+                ref_Gamma = GM.refine_trans(_gamma_g, _gamma_l, exp, values, states, _stm.get_default_state(), pc_prime)
+                states.append(_stm.get_default_state())
+
+                Gamma_f = []
+                for state in states:
+                    if (ref_Gamma.get(state) != None):
+                        for ref_gamma_g, ref_gamma_l in ref_Gamma[state]:
+                            state_body, _, _ = _B_l.get(state)
+                            # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
+                            Gamma_i = type_check_ast(state_body, ref_gamma_g, ref_gamma_l, pc_prime, _B_g, _B_l, _C)
+                            Gamma_f.extend(Gamma_i)
+
+                if (l.is_high()):
+                    GM.join_Gammas(Gamma_f)
+
+                return Gamma_f
+            
+            else: # select expression was none
+                default_state = _stm.get_default_state()
                 state_body_d, _, _ = _B_l.get(default_state)
                 # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
-                Gamma_d = type_check_ast(state_body_d, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
-                Gamma_f = Gamma_d
-            else:
-                Gamma_f = []
-                for i, (ref_gamma_g, ref_gamma_l) in enumerate(ref_Gamma):
-                    if i < len(states):
-                        state_body_i, _, _ = _B_l.get(states[i])
-                        # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
-                        Gamma_i = type_check_ast(state_body_i, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
-                        Gamma_f.extend(Gamma_i)
-                    else:
-                        state_body_d, _, _ = _B_l.get(default_state)
-                        # We don't support local gamma and local B for states. Please see the Trans rule in the paper.
-                        Gamma_d = type_check_ast(state_body_d, ref_gamma_g, ref_gamma_l, _pc, _B_g, _B_l, _C)
-                        Gamma_f.extend(Gamma_d)
-            
+                return type_check_ast(state_body_d, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C)
 
-            if (l.is_high()):
-                GM.join_Gammas(Gamma_f)
 
-            return Gamma_f
 
         ################################################
         case AST.StatementsEnum.APPLY:
@@ -240,24 +283,22 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             arguments = _stm.get_arguments()
 
             label = LATTICE.Low()
-            for exp in arguments:
-                exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
-                label = LATTICE.lup(label, exp_type.get_label())
-
+            if (arguments != None):
+                for exp in arguments:
+                    exp_type = EXP.type_check_expression(exp, _gamma_g, _gamma_l)
+                    label = LATTICE.lup(label, exp_type.get_label())
             pc_prime = LATTICE.lup(_pc, label)
 
             Gamma_f = []
             cont = _C.get_table(table_name)
             for pred, (act, gamma_t) in cont.get().items():
-                sat = GM.is_sat(_gamma_g, _gamma_l, pred)
+                sat = EXP.is_sat(_gamma_g, _gamma_l, pred)
                 if sat:
                     ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred)
                     a_body, a_params, a_type = _B_l.get(act)
                     for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
                         returned_Gamma = action_call(ref_gamma_g, ref_gamma_l, pc_prime, _B_g, _C, gamma_t, a_body, a_params)
                         Gamma_f.extend(returned_Gamma)
-
-
 
             return Gamma_f
 
@@ -381,8 +422,13 @@ def action_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _gamma_t, _a_body, _a_params)
         GM.update(param.get_variable(), exp_type, _gamma_g, gamma_l)
 
     returned_Gamma = type_check_ast(_a_body, _gamma_g, gamma_l, _pc, _B_g, B_l, _C)
+    Gamma_n = []
+    # Actions don't have "inout" and "out" parameters, so they only modify the global gamma
+    # hence we can ignore their local gamma
+    for (g_g, g_l) in returned_Gamma:
+        Gamma_n.append((g_g, _gamma_l))
 
-    return returned_Gamma
+    return Gamma_n
 
 ##############################################################
 ####################### PARSER CALL ##########################
@@ -403,7 +449,7 @@ def parser_call(_gamma_g, _gamma_l, _pc, _B_g, _B_l, _C, _p_args, _start_body, _
 def control_blcok_call(_gamma_g, _gamma_l, _pc, _B_g, _C, _ct_args, _ct_apply_body, _ct_body, _ct_params):
     B_l = generate_B_mapping(_ct_body, _global=False)
     
-    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _ct_args, _ct_body, _ct_params)
+    gamma_l_f, co = function_call_preprocess(_gamma_g, _gamma_l, _ct_args, _ct_apply_body, _ct_params)
     returned_Gamma = type_check_ast(_ct_apply_body, _gamma_g, gamma_l_f, _pc, _B_g, B_l, _C)
 
     Gamma_n = []

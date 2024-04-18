@@ -81,7 +81,7 @@ state_definition: "state" IDENTIFIER "{" block "}"
 
 transition: "transition" "select"  "(" (expression)? ")" "{" value_states default_state "}"
 value_states: value_state*
-value_state: (hex_value | unsigned | boolean_value) ":" IDENTIFIER ";"
+value_state: (hex_value | unsigned | boolean_value | IDENTIFIER) ":" IDENTIFIER ";"
 default_state: "default" ":" IDENTIFIER ";"
 
 expression: binary_operation
@@ -120,6 +120,8 @@ lval_slicing: lval "[" NUMBER ":" NUMBER "]"
 _seperated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
 IDENTIFIER: CNAME
 
+INCLUDE: /#.*/
+
 SINGLE_COMMENT: /\/\/[^\n]*/
 COMMENT_START: "/*"
 COMMENT_END: "*/"
@@ -127,3 +129,4 @@ COMMENT_CONTENT: /(.|\n)+?/
 COMMENT: COMMENT_START COMMENT_CONTENT COMMENT_END | SINGLE_COMMENT
 %ignore COMMENT
 %ignore WS
+%ignore INCLUDE

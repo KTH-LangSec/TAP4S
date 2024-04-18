@@ -115,7 +115,12 @@ class P4Transformer(Transformer):
         return ast.Transition(exp, def_state, val_states)
 
     def value_state(self, *args):
-        return ast.ValueState(args[0], args[1])
+        if isinstance(args[0], str): # value is a constant  
+            val = lval.Variable(args[0])
+        else:
+            val = args[0]
+
+        return ast.ValueState(val, args[1])
 
     def value_states(self, *args):
         return list(args)

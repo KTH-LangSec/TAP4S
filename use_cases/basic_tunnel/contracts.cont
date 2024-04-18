@@ -1,15 +1,35 @@
-// extern
-mark_to_drop:
-true -> 
-    standard_metadata.egress_spec : < bs[9], { (0, 9) -> ([0,0], low) } > ;
+// externs
+extern mark_to_drop:
+        true ->
+                (
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } > // port 0
+                )
+
+extern update_checksum:
+        true -> ()
 
 
-// table
-mac_lookup:
-hdr.ethernet.srcAddr == 08:01:* ->
-    mac_forward,
-    port = 1,
-    tmpAddr = 08:01:*
+// tables
+table ipv4_lpm:
+        hdr.ipv4.dstAddr[7:0] == 8w10 -> // 10.*.*.*
+                ipv4_forward,
+                (
+                    dstAddr: < bs[48], { (0, 47) -> ([112394521950, 112394521950], low) } >,   // 00:1A:2B:3C:4D:5E
+                    port: < bs[9], { (0, 8) -> ([9,9], low) } >  // port 9
+                )
 
-// if the temp address is not this value, then we are forwarding to the wrong sub-net and migh leak information.
+        hdr.ipv4.dstAddr[7:0] != 8w10 -> //otherwise
+                NoAction, ()
 
+        false -> 
+                drop, ()
+
+table myTunnel_exact:
+        hdr.myTunnel.dst_id == 16w1 -> // dst_id is 1
+                myTunnel_forward,
+                (
+                    port: < bs[9], { (0, 8) -> ([1,1], low) } > // port 1
+                )
+
+        hdr.myTunnel.dst_id != 16w1 -> //otherwise
+                drop, ()

@@ -48,10 +48,14 @@ class Local_B(B):
         super().__init__(B_Enum.LOCAL) 
         self.mapping = {}
 
-    # TODO: there are three default states of start, accept and reject
-    # TODO: accept returns from the parser
-    # TODO: start, always start from this state (wherever it is)
-    # TODO: reject ?? (drops the packet)
+        # accept returns from the parser
+        self.mapping["accept"] = ([], None , FunctionTypeEnum.STATE)
+
+        # reject drops the packet 
+        # #TODO how to handel?
+
+        # handling NoAction action
+        self.mapping["NoAction"] = ([], [] , FunctionTypeEnum.ACTION)
 
     def add(self, _name, _body, _params, _type):
         self.mapping[_name] = (list(_body), _params, _type)

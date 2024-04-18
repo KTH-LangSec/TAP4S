@@ -1,4 +1,5 @@
 import sys
+import setting
 
 
 def error(_input):
@@ -6,4 +7,5 @@ def error(_input):
     sys.exit()
 
 def warning(_input):
-    print(">>> WARNING: "+ str(_input))
+    if setting.show_warnings:
+        print(">>> WARNING: "+ str(_input))

@@ -34,7 +34,7 @@ interval: "*" | NUMBER "," NUMBER
 indices: NUMBER "," NUMBER
 
 // bool
-bool_type = "<" "bool" "," "[" NUMBER "," NUMBER "]" "," label ">"
+bool_type: "<" "bool" "," "[" NUMBER "," NUMBER "]" "," label ">"
 
 //TODO struct
 //TODO header

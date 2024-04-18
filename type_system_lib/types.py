@@ -219,24 +219,30 @@ class Struct():
         return self.fields.keys()
 
     def has_the_same_fields_as(self, _other_struct):
-        if (set(self.fields.keys()) != set(_other_struct.get_keys())):
-            return False
-        else:
-            res = True
-            for name, fld in self.fields.items():
-                other_fld = _other_struct.get_field(name)
-                if (fld.get_type() != other_fld.get_type()):
-                    return False
-                else:
-                    match fld.get_type():
-                        case TypesEnum.BOOL:
-                            res = res and True
-                        case TypesEnum.BIT_STRING:
-                            res = res and fld.has_same_slices_as(other_fld)
-                        case TypesEnum.STRUCT:
-                            res = res and fld.has_the_same_fields_as(other_fld)
-                        case TypesEnum.HEADER:
-                            res = res and fld.has_the_same_fields_as(other_fld)
+        for fld_name in self.fields.keys():
+            if not (fld_name in _other_struct.get_keys()):
+                return False
+        for fld_name in _other_struct.get_keys():
+            if not (fld_name in self.fields.keys()):
+                return False
+
+        # field names are the same
+        res = True
+        for name, fld in self.fields.items():
+            other_fld = _other_struct.get_field(name)
+            if (fld.get_type() != other_fld.get_type()):
+                return False
+            else:
+                match fld.get_type():
+                    case TypesEnum.BOOL:
+                        res = res and True
+                    case TypesEnum.BIT_STRING:
+                        res = res and True
+                    case TypesEnum.STRUCT:
+                        res = res and fld.has_the_same_fields_as(other_fld)
+                    case TypesEnum.HEADER:
+                        res = res and fld.has_the_same_fields_as(other_fld)
+
         return res
 
     def get_size(self):
@@ -294,28 +300,34 @@ class Header():
         return self.fields.keys()
 
     def has_the_same_fields_as(self, _other_header):
-        if (set(self.fields.keys()) != set(_other_header.get_keys())):
-            return False
-        else:
-            res = True
-            for name, fld in self.fields.items():
-                other_fld = _other_header.get_field(name)
-                if (fld.get_type() != other_fld.get_type()):
-                    return False
-                else:
-                    match fld.get_type():
-                        case TypesEnum.BOOL:
-                            res = res and True
-                        case TypesEnum.BIT_STRING:
-                            res = res and fld.has_same_slices_as(other_fld)
-                        case TypesEnum.STRUCT:
-                            res = res and fld.has_the_same_fields_as(other_fld)
-                        case TypesEnum.HEADER:
-                            res = res and fld.has_the_same_fields_as(other_fld)
+        for fld_name in self.fields.keys():
+            if not (fld_name in _other_header.get_keys()):
+                return False
+        for fld_name in _other_header.get_keys():
+            if not (fld_name in self.fields.keys()):
+                return False
+
+        # field names are the same
+        res = True
+        for name, fld in self.fields.items():
+            other_fld = _other_header.get_field(name)
+            if (fld.get_type() != other_fld.get_type()):
+                return False
+            else:
+                match fld.get_type():
+                    case TypesEnum.BOOL:
+                        res = res and True
+                    case TypesEnum.BIT_STRING:
+                        res = res and True
+                    case TypesEnum.STRUCT:
+                        res = res and fld.has_the_same_fields_as(other_fld)
+                    case TypesEnum.HEADER:
+                        res = res and fld.has_the_same_fields_as(other_fld)
+
         return res
     
-    def set_validity(self):
-        self.validity = True
+    def set_validity(self, _bool):
+        self.validity = _bool
     def get_validity(self):
         return self.validity
 
@@ -330,11 +342,12 @@ class Header():
             fld.raise_label(_label)
 
     def __str__(self):
+        validity = "validity:" + str(self.validity) + " ,"
         fields_lst = []
         for key, value in self.fields.items():
             fields_lst.append(str(key) + ":" + str(value))
         fields = '; '.join(list(map(str, fields_lst)))
-        return " < [ " + fields + " ] >"
+        return " < " + validity + " [ " + fields + " ] >"
 
 ##################################################
 class Slice():
@@ -362,16 +375,22 @@ class Slice():
         self.interval = _interval
 
     def split(self, _split_index):
+        split_index = _split_index - self.start
+
+        if (split_index <= 0):
+            keep_slc = Slice(0, self.size, INTERVAL.Interval(self.interval.get_min(), self.interval.get_max(), self.size), self.label)
+            return (None, keep_slc)
+
         length = self.size
 
         bin_min = int_to_binary(self.interval.get_min(), length)
         bin_max = int_to_binary(self.interval.get_max(), length)
 
-        a, b = split_binary_at_index(bin_min, _split_index)
-        c, d = split_binary_at_index(bin_max, _split_index)
+        a, b = split_binary_at_index(bin_min, split_index)
+        c, d = split_binary_at_index(bin_max, split_index)
 
         ## ret
-        r_size = _split_index
+        r_size = split_index
 
         r_start = 0
         r_end = r_size - 1
@@ -383,7 +402,7 @@ class Slice():
         ret_slc = Slice(r_start, r_end, INTERVAL.Interval(r_min, r_max, r_size), self.label)
         
         # keep
-        k_size = int(length - _split_index)
+        k_size = int(length - split_index)
 
         k_start = 0
         k_end = k_size - 1

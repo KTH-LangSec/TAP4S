@@ -38,7 +38,7 @@ class Interval():
 
         if (self.min < 0):
             self.min = 0
-            self.max = self.max_value
+            #self.max = self.max_value
 
     def __str__(self):
         return "[" + str(self.min) + ", " + str(self.max) + "]"
