@@ -14,22 +14,22 @@ table ipv4_lpm:
         hdr.ipv4.dstAddr[7:0] == 8w10 -> // 10.*.*.*
                 ipv4_forward,
                 (
-                    dstAddr: < bs[48], { (0, 47) -> ([112394521950, 112394521950], low) } >,   // 00:1A:2B:3C:4D:5E
-                    port: < bs[9], { (0, 8) -> ([9,9], low) } >  // port 9
+                    dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,   // any address
+                    port: < bs[9], { (0, 8) -> ([10,20], low) } >  // ports 10-20
                 )
 
         hdr.ipv4.dstAddr[7:0] != 8w10 -> //otherwise
-                NoAction, ()
-
-        false -> 
                 drop, ()
 
+        false -> 
+                NoAction, ()
+
 table myTunnel_exact:
-        hdr.myTunnel.dst_id == 16w1 -> // dst_id is 1
+        (hdr.myTunnel.dst_id > 16w0) && (hdr.myTunnel.dst_id < 16w10) -> // 1 <= dst_id <= 9
                 myTunnel_forward,
                 (
-                    port: < bs[9], { (0, 8) -> ([1,1], low) } > // port 1
+                    port: < bs[9], { (0, 8) -> ([1,9], low) } > // port 1-9
                 )
 
-        hdr.myTunnel.dst_id != 16w1 -> //otherwise
+        (hdr.myTunnel.dst_id <= 16w0) || (hdr.myTunnel.dst_id >= 16w10) -> //otherwise
                 drop, ()

@@ -1,0 +1,12 @@
+Ipacket:
+(0, 15) -> ([4626, 4626], low);     /* etherType */
+
+| 
+
+Ipacket:
+(0, 15) -> ([0, 4625], low);        /* etherType */
+
+|
+
+Ipacket:
+(0, 15) -> ([4627, 65535], low);    /* etherType */

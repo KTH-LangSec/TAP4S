@@ -1,21 +1,36 @@
 import type_system_lib.gamma as GM
 import copy
 
+import logger as LOGGER
+
 
 
 def check(_Gamma_g, _Gamma_o):
     for gamma_o in _Gamma_o:
-        for i in range(len(_Gamma_g)):
-            for j in range(i+1, len(_Gamma_g)):
-                gamma_g_1 = copy.deepcopy(_Gamma_g[i])
-                gamma_g_2 = copy.deepcopy(_Gamma_g[j])
-                if not (GM.is_gamma_intersect_empty(gamma_o, gamma_g_1) and GM.is_gamma_intersect_empty(gamma_o, gamma_g_2)):
-                    GM.join_gamma(gamma_g_1, gamma_g_2)
-                    if not GM.is_below(gamma_g_1, gamma_o):
-                        print("---------------------"*2)
-                        print(GM.is_below(gamma_g_1, gamma_o))
-                        print()
-                        print("gamma_g1:", gamma_g_1.project(gamma_o.get_keys()))
-                        print("gamma_g2:", gamma_g_2.project(gamma_o.get_keys()))
-                        print("gamma_o:", gamma_o)
-                        print()
+        for i, t_gamma_g_1 in enumerate(_Gamma_g):
+            for j, t_gamma_g_2 in enumerate(_Gamma_g):
+                if (i != j):
+                    gamma_g_1 = t_gamma_g_1.project(gamma_o.get_keys()).serialize()
+                    gamma_g_2 = t_gamma_g_2.project(gamma_o.get_keys()).serialize()
+                    if ( (not GM.is_gamma_intersect_empty(gamma_o, gamma_g_1)) and (not GM.is_gamma_intersect_empty(gamma_o, gamma_g_2))):
+                        LOGGER.debug("---------------------"*2)
+                        #LOGGER.debug("gamma_g1:\n" + str(gamma_g_1))
+                        #LOGGER.debug("gamma_g2:\n" + str(gamma_g_2))
+                        #LOGGER.debug("\n")
+                        GM.join_gamma(gamma_g_1, gamma_g_2)
+                        LOGGER.debug("gamma_join:\n" + str(gamma_g_1))
+                        LOGGER.debug("gamma_o:\n" + str(gamma_o))
+                        if not GM.is_below(gamma_g_1, gamma_o):
+                            LOGGER.debug("### ⊑")
+                            LOGGER.debug(GM.is_below(gamma_g_1, gamma_o))
+                            return False, (gamma_g_1, gamma_g_2, gamma_o)
+
+    return True, None
+
+    # for gamma_o in _Gamma_o:
+    #     for i, t_gamma_g_1 in enumerate(_Gamma_g):
+    #         gamma_g = t_gamma_g_1.project(gamma_o.get_keys()).serialize()
+    #         print("---------------------"*2)
+    #         print("gamma_g1:\n", gamma_g)
+    #         print("gamma_o:\n", gamma_o)
+    #         print()

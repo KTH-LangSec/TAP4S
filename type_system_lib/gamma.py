@@ -1,5 +1,6 @@
 from enum import Enum
 import parser_lib.lval as LVAL
+import type_system_lib as TS
 import type_system_lib.types as TYPE
 import type_system_lib.interval as INTERVAL
 import type_system_lib.label as LATIICE
@@ -57,6 +58,14 @@ class GlobalGamma(Gamma):
                 return_gamma.add(key, value)
         return return_gamma
 
+    def serialize(self):
+        return_gamma = GlobalGamma()
+        for key, value in self.mapping.items():
+            bs_type = TS.convert_to_bs(value)
+            return_gamma.add(key, bs_type)
+
+        return return_gamma
+
 
     def __str__(self):
         #result = "gamma_G: \n"
@@ -104,6 +113,13 @@ class LocalGamma(Gamma):
         for key, value in self.mapping.items():
             if key in _keys_to_keep:
                 return_gamma.add(key, value)
+        return return_gamma
+
+    def serialize(self):
+        return_gamma = LocalGamma()
+        for key, value in self.mapping.items():
+            bs_type = TS.convert_to_bs(value)
+            return_gamma.add(key, bs_type)
         return return_gamma
 
     def __str__(self):
@@ -449,7 +465,7 @@ def is_type_intersect_empty(_type_1, _type_2):
                                     if (intersect_interval == None): # check if there is actually any intersection
                                         return True
                                     
-                                
+
                                 else: # slicing
                                     if (is_empty_intersect_sub_slice(slc, overlaps[0]) == True):
                                         return True
@@ -655,7 +671,7 @@ def is_type_below(_type_left, _type_right):
     else:
         match _type_left.get_type():
             case TYPE.TypesEnum.BOOL:
-                return _type_left.get_label().is_below(_type_right.get_label())
+                return _type_left.get_label().is_below(_type_right.get_label()), 
 
             case TYPE.TypesEnum.BIT_STRING:
                 if (_type_left.get_size() == _type_right.get_size()): # the lengths are the same
@@ -664,7 +680,7 @@ def is_type_below(_type_left, _type_right):
                             lebel_left = slc.get_label()
                             lebel_right = _type_right.get_slice(i).get_label()
                             
-                            if (not lebel_left.is_below(lebel_right)): 
+                            if (not lebel_left.is_below(lebel_right)):
                                 return False
 
                         return True

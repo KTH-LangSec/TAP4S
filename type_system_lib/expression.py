@@ -278,7 +278,7 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_less_equal(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_less(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -368,7 +368,7 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_bigger_equal(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_bigger(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -585,7 +585,7 @@ def refine_less_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_bigger(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_bigger_equal(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)
@@ -673,7 +673,7 @@ def refine_bigger_equal(_lhs, _rhs, _gamma_g, _gamma_l):
                 return []
 
         case 1: # only one variable on the right hand side
-            return refine_less(_rhs, _lhs, _gamma_g, _gamma_l)
+            return refine_less_equal(_rhs, _lhs, _gamma_g, _gamma_l)
 
         case _: # variables on both sides
             cp_gamma_g = copy.deepcopy(_gamma_g)

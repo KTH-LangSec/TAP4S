@@ -9,3 +9,7 @@ def error(_input):
 def warning(_input):
     if setting.show_warnings:
         print(">>> WARNING: "+ str(_input))
+
+def debug(_input):
+    if setting.debug:
+        print(_input)

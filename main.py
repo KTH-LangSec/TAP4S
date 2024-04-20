@@ -13,6 +13,8 @@ import type_system_lib.types as TYPE
 import parser_lib as PARSER
 import type_system_lib.security_condition as SECURITY
 
+import setting
+
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
@@ -21,7 +23,12 @@ if __name__ == '__main__':
     arg_parser.add_argument("-o", type=str, help="Address the of the output policy.")
     arg_parser.add_argument("-c", type=str, help="Address the of the contract.")
 
+    arg_parser.add_argument('-d', action='store_true', help='Enable debug mode (prints gammas)')
+
     args = arg_parser.parse_args()
+
+    if args.d:
+        setting.debug = True
 
     #############################################
     #################### AST ####################
@@ -149,20 +156,25 @@ if __name__ == '__main__':
     pruned_Gamma = GM.prune_invalid_gammas(final_Gamma)
     Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
-    print()
-    for i, (gg, gl) in enumerate(final_Gamma):
-        print("########## final gamma " + str(i+1) + ":")
-        print(gg)
+    # print()
+    # for i, (gg, gl) in enumerate(pruned_Gamma):
+    #     print("########## final gamma " + str(i+1) + ":")
+    #     print(gg)
         # print(gg.get(LVAL.Variable("Opacket")))
 
     #############################################
     ############## Security Check ###############
     #############################################
-    #verdict = SECURITY.check(Gamma_g, Gamma_o)
+    verdict, reason = SECURITY.check(Gamma_g, Gamma_o)
 
-    # u_gamma = GM.intersect_Gammas(final_Gamma)
-    # for i, (gg, gl) in enumerate(u_gamma):
-    #     print("########## final gamma after intersection " + str(i+1) + ":")
-    #     print(gg)
+    print("\n>>>>>> VERDICT >>>>>> ", end="")
+    if verdict:
+        print("\tSECURE ✓")
+    else:
+        print("\tINSECURE ✗")
+        print("-"*20)
+        print("gamma_1:\n", reason[0])
+        print("gamma_2:\n", reason[1])
+        print("gamma_o:\n", reason[2])
 
 

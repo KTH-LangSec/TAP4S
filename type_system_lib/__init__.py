@@ -88,7 +88,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                 Gamma_f = []
 
                 for pred, gamma_t in cont.get().items():
-                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred)
+                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred, LATTICE.Low())
                     if (ref_Gamma != None):
                         gamma_t.raise_types(_pc)
                         for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
@@ -294,7 +294,7 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
             for pred, (act, gamma_t) in cont.get().items():
                 sat = EXP.is_sat(_gamma_g, _gamma_l, pred)
                 if sat:
-                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred)
+                    ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred, LATTICE.Low()) 
                     a_body, a_params, a_type = _B_l.get(act)
                     for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
                         returned_Gamma = action_call(ref_gamma_g, ref_gamma_l, pc_prime, _B_g, _C, gamma_t, a_body, a_params)
