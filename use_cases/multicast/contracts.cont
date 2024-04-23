@@ -1,0 +1,21 @@
+// externs
+extern mark_to_drop:
+        true ->
+                (
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } >    // port 0
+                )
+
+
+// tables
+table mac_lookup:
+        hdr.ethernet.dstAddr == 48w11268015189424 ->                       // switch's mac address: 00:1A:A0:B0:C0:D0
+                multicast, ()
+
+        hdr.ethernet.dstAddr != 48w11268015189424 ->                       //otherwise
+                mac_forward,
+                (
+                    port: < bs[9], { (0, 8) -> ([10,20], low) } >          // forwarding ports 10-20
+                )
+
+        false ->
+                drop, ()

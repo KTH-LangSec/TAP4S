@@ -2,7 +2,7 @@
 extern mark_to_drop:
         true ->
                 (
-                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } > // port 0
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } >    // port 0
                 )
 
 extern update_checksum:
@@ -11,11 +11,11 @@ extern update_checksum:
 
 // tables
 table ipv4_lpm:
-        hdr.ipv4.dstAddr[7:0] == 8w10 -> // 10.*.*.*
+        hdr.ipv4.dstAddr[7:0] == 8w10 ->                                        // 10.*.*.*
                 ipv4_forward,
                 (
-                    dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,   // any address
-                    port: < bs[9], { (0, 8) -> ([10,20], low) } >  // ports 10-20
+                    dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,             // any address
+                    port: < bs[9], { (0, 8) -> ([10,20], low) } >               // ports 10-20
                 )
 
         hdr.ipv4.dstAddr[7:0] != 8w10 -> //otherwise
@@ -25,11 +25,11 @@ table ipv4_lpm:
                 NoAction, ()
 
 table myTunnel_exact:
-        (hdr.myTunnel.dst_id > 16w0) && (hdr.myTunnel.dst_id < 16w10) -> // 1 <= dst_id <= 9
+        (hdr.myTunnel.dst_id > 16w0) && (hdr.myTunnel.dst_id < 16w10) ->        // 1 <= dst_id <= 9
                 myTunnel_forward,
                 (
-                    port: < bs[9], { (0, 8) -> ([1,9], low) } > // port 1-9
+                    port: < bs[9], { (0, 8) -> ([1,9], low) } >                 // port 1-9
                 )
 
-        (hdr.myTunnel.dst_id <= 16w0) || (hdr.myTunnel.dst_id >= 16w10) -> //otherwise
+        (hdr.myTunnel.dst_id <= 16w0) || (hdr.myTunnel.dst_id >= 16w10) ->      //otherwise
                 drop, ()

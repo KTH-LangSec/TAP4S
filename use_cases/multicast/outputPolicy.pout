@@ -1,0 +1,36 @@
+standard_metadata:
+(0, 8) -> ([*], low);                                   /* ingress_port */
+(9, 17) -> ([*], low);                                  /* egress_spec */
+(18, 26) -> ([*], low);                                 /* egress_port */
+(27, 42) -> ([1,1], low);                               /* mcast_grp */
+
+Opacket:
+(0, 47) -> ([*], low);                                  /* dstAddr */
+(48, 95) -> ([*], low);                                 /* srcAddr */
+(96, 111) -> ([*], low);                                /* etherType */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], low);                                   /* ingress_port */
+(9, 17) -> ([*], low);                                  /* egress_spec */
+(18, 26) -> ([*], low);                                 /* egress_port */
+(27, 42) -> ([0,0], low);                               /* mcast_grp */
+
+Opacket:
+(0, 47) -> ([*], high);                                 /* dstAddr */
+(48, 95) -> ([*], high);                                /* srcAddr */
+(96, 111) -> ([*], high);                               /* etherType */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], low);                                   /* ingress_port */
+(9, 17) -> ([*], low);                                  /* egress_spec */
+(18, 26) -> ([*], low);                                 /* egress_port */
+(27, 42) -> ([2,65535], low);                           /* mcast_grp */
+
+Opacket:
+(0, 47) -> ([*], high);                                 /* dstAddr */
+(48, 95) -> ([*], high);                                /* srcAddr */
+(96, 111) -> ([*], high);                               /* etherType */
