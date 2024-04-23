@@ -505,7 +505,32 @@ def convert_to_bs(_input_type):
     input_type = copy.deepcopy(_input_type)
 
     match input_type.get_type():
-        case TYPE.TypesEnum.HEADER | TYPE.TypesEnum.STRUCT:
+        case TYPE.TypesEnum.HEADER:
+            slices = []
+            size = 0
+            if (input_type.get_validity()): # only emit valid headers
+                for fld_n, fld_type in input_type.get_fields():
+                    match fld_type.get_type():
+                        case TYPE.TypesEnum.STRUCT:
+                            bs_type = struct_to_bs(fld_type)
+                            size += bs_type.get_size()
+                            slices.extend(bs_type.get_slices())
+                        case TYPE.TypesEnum.HEADER: 
+                            if (fld_type.get_validity()): # only emit valid headers
+                                bs_type = struct_to_bs(fld_type)
+                                size += bs_type.get_size()
+                                slices.extend(bs_type.get_slices())
+                        case TYPE.TypesEnum.BIT_STRING:
+                            size += fld_type.get_size()
+                            slices.extend(fld_type.get_slices())
+                        case TYPE.TypesEnum.BOOL:
+                            bslice = TYPE.Slice(0, 1, fld_type.get_interval(), fld_type.get_label())
+                            size += 1
+                            slices.append(bslice)
+
+            return TYPE.BitString(size, _slices=slices)
+        
+        case TYPE.TypesEnum.STRUCT:
             slices = []
             size = 0
             for fld_n, fld_type in input_type.get_fields():
@@ -514,10 +539,11 @@ def convert_to_bs(_input_type):
                         bs_type = struct_to_bs(fld_type)
                         size += bs_type.get_size()
                         slices.extend(bs_type.get_slices())
-                    case TYPE.TypesEnum.HEADER:
-                        bs_type = struct_to_bs(fld_type)
-                        size += bs_type.get_size()
-                        slices.extend(bs_type.get_slices())
+                    case TYPE.TypesEnum.HEADER: 
+                        if (fld_type.get_validity()): # only emit valid headers
+                            bs_type = struct_to_bs(fld_type)
+                            size += bs_type.get_size()
+                            slices.extend(bs_type.get_slices())
                     case TYPE.TypesEnum.BIT_STRING:
                         size += fld_type.get_size()
                         slices.extend(fld_type.get_slices())
@@ -527,6 +553,7 @@ def convert_to_bs(_input_type):
                         slices.append(bslice)
 
             return TYPE.BitString(size, _slices=slices)
+
 
         case TYPE.TypesEnum.BIT_STRING:
             return input_type

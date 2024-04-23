@@ -13,3 +13,15 @@ def warning(_input):
 def debug(_input):
     if setting.debug:
         print(_input)
+
+
+#################################
+def print_red(text, end='\n'):
+    print("\033[91m" + text + "\033[0m", end=end)
+
+def print_blue(text, end='\n'):
+    print("\033[94m" + text + "\033[0m", end=end)
+
+def print_green(text, end='\n'):
+    print("\033[92m" + text + "\033[0m", end=end)
+

@@ -157,7 +157,7 @@ if __name__ == '__main__':
     Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
     # print()
-    # for i, (gg, gl) in enumerate(pruned_Gamma):
+    # for i, (gg, gl) in enumerate(final_Gamma):
     #     print("########## final gamma " + str(i+1) + ":")
     #     print(gg)
         # print(gg.get(LVAL.Variable("Opacket")))
@@ -165,16 +165,19 @@ if __name__ == '__main__':
     #############################################
     ############## Security Check ###############
     #############################################
-    verdict, reason = SECURITY.check(Gamma_g, Gamma_o)
+    verdict, gammas = SECURITY.check(Gamma_g, Gamma_o)
 
-    print("\n>>>>>> VERDICT >>>>>> ", end="")
+    LOGGER.print_blue("\n>>>>>> VERDICT >>>>>> ", end="")
     if verdict:
-        print("\tSECURE ✓")
+        LOGGER.print_green("\tSECURE ✓")
     else:
-        print("\tINSECURE ✗")
-        print("-"*20)
-        print("gamma_1:\n", reason[0])
-        print("gamma_2:\n", reason[1])
-        print("gamma_o:\n", reason[2])
+        LOGGER.print_red("\tINSECURE ✗")
+        print("-"*21)
+        print("gamma_1:\n", gammas[0])
+        print("gamma_2:\n", gammas[1])
+        print("gamma_o:\n", gammas[2])
+
+
+    
 
 

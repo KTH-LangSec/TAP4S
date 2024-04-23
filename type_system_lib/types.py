@@ -169,18 +169,21 @@ class BitString():
         return_sub_slices = []
         keep_sub_slices = []
         size = _size
+
         for slc in self.slices:
             if (size > 0):
                 if (size >= slc.get_size()):
                     return_sub_slices.append(slc)
                     size -= slc.get_size()
                 else:
-                    ret_slc, keep_slc = slc.split(size)
+                    ret_slc, keep_slc = slc.split(slc.start + size)
                     size = 0
                     return_sub_slices.append(ret_slc)
                     keep_sub_slices.append(keep_slc)
             else:
                 keep_sub_slices.append(slc)
+
+        
 
         self.update_slices(keep_sub_slices)
 

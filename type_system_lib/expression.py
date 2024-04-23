@@ -115,7 +115,7 @@ def binary_bs2bs(_op, _lhs, _rhs):
         else:
             LOGGER.error("we do not support binary operations on bit-strings with more than ONE slice!")
     else:
-        LOGGER.error("the size of the expressions doesn't match!")
+        LOGGER.error("binary_bs2bs: the size of the expressions doesn't match!")
 
 
 def convert_binary_bs2bs(_op, _lhs_interval, _rhs_interval, _slice_lhs, _slice_rhs):
@@ -137,7 +137,7 @@ def binary_bs2bool(_op, _lhs, _rhs):
         else:
             LOGGER.error("we do not support binary operations on bit-strings with more than ONE slice!")
     else:
-        LOGGER.error("the size of the expressions doesn't match!")
+        LOGGER.error("binary_bs2bool: the size of the expressions doesn't match!")
 
 def convert_binary_bs2bool(_op, _lhs_interval, _rhs_interval):
     match _op:

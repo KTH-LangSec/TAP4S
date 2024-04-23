@@ -14,15 +14,10 @@ def check(_Gamma_g, _Gamma_o):
                     gamma_g_2 = t_gamma_g_2.project(gamma_o.get_keys()).serialize()
                     if ( (not GM.is_gamma_intersect_empty(gamma_o, gamma_g_1)) and (not GM.is_gamma_intersect_empty(gamma_o, gamma_g_2))):
                         LOGGER.debug("---------------------"*2)
-                        #LOGGER.debug("gamma_g1:\n" + str(gamma_g_1))
-                        #LOGGER.debug("gamma_g2:\n" + str(gamma_g_2))
-                        #LOGGER.debug("\n")
                         GM.join_gamma(gamma_g_1, gamma_g_2)
                         LOGGER.debug("gamma_join:\n" + str(gamma_g_1))
                         LOGGER.debug("gamma_o:\n" + str(gamma_o))
                         if not GM.is_below(gamma_g_1, gamma_o):
-                            LOGGER.debug("### ⊑")
-                            LOGGER.debug(GM.is_below(gamma_g_1, gamma_o))
                             return False, (gamma_g_1, gamma_g_2, gamma_o)
 
     return True, None

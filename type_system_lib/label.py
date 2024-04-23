@@ -19,10 +19,7 @@ class Low(Lattice):
         return True
 
     def is_below(self, _other_label):
-        if _other_label.is_high():
-            return False
-        else:
-            return True
+        return True
 
     def __str__(self):
         return "LOW"

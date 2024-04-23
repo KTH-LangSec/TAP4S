@@ -72,7 +72,7 @@ class GlobalGamma(Gamma):
         result = ""
         for var in self.mapping.keys():
             result += "\t" + str(var) + " -> " + str(self.mapping[var]) + "\n"
-        result += "\n\tIs Valid: " + str(self.validity) + "\n"
+        #result += "\n\tIs Valid: " + str(self.validity) + "\n"
         return result
 
 ###########################################################
@@ -127,7 +127,7 @@ class LocalGamma(Gamma):
         result = ""
         for var in self.mapping.keys():
             result += "\t" + str(var) + " -> " + str(self.mapping[var]) + "\n"
-        result += "\n\tIs Valid: " + str(self.validity) + "\n"
+        #result += "\n\tIs Valid: " + str(self.validity) + "\n"
         return result
 
 
@@ -347,7 +347,7 @@ def refine_trans(_gamma_g, _gamma_l, _exp, _vals, _states, _default_state, _labe
     res = {}
 
     if (len(_vals) == 0):
-        res["default"] = [(copy.deepcopy(_gamma_g), copy.deepcopy(_gamma_l))]
+        res[_default_state] = [(copy.deepcopy(_gamma_g), copy.deepcopy(_gamma_l))]
         return res
 
     else:
@@ -478,10 +478,19 @@ def is_type_intersect_empty(_type_1, _type_2):
 
                         return False
                     
-                else: # the lengths are NOT the same
+                else: 
+                    # the lengths are NOT the same
                     # intersect of two bit-strings with different lengths will be empty!
                     # Since they are technichally diffrent types
-                    return True
+                    # return True
+
+                    # ABSTRACTION 
+                    if (_type_1.get_size() > _type_2.get_size()):
+                        trimmed_type = _type_1.consume_sub_string(_type_2.get_size())
+                        return is_type_intersect_empty(trimmed_type, _type_2)
+                    else:
+                        trimmed_type = _type_2.consume_sub_string(_type_1.get_size())
+                        return is_type_intersect_empty(_type_1, trimmed_type)
 
 
             case TYPE.TypesEnum.STRUCT:
@@ -681,6 +690,8 @@ def is_type_below(_type_left, _type_right):
                             lebel_right = _type_right.get_slice(i).get_label()
                             
                             if (not lebel_left.is_below(lebel_right)):
+                                LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
+                                LOGGER.print_red(str(slc) + " \u2291\u0338 " + str(_type_right.get_slice(i)) + "\n")
                                 return False
 
                         return True
@@ -694,6 +705,8 @@ def is_type_below(_type_left, _type_right):
                             else:
                                 for overlap in overlaps:
                                     if (not slc.get_label().is_below(overlap.get_label())):
+                                        LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
+                                        LOGGER.print_red(str(slc) + " \u2291\u0338 " + str(overlap) + "\n")
                                         return False
 
                         return True
