@@ -680,7 +680,11 @@ def is_type_below(_type_left, _type_right):
     else:
         match _type_left.get_type():
             case TYPE.TypesEnum.BOOL:
-                return _type_left.get_label().is_below(_type_right.get_label()), 
+                result = _type_left.get_label().is_below(_type_right.get_label())
+                if not result:
+                    LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
+                    LOGGER.print_red(str(_type_left) + " \u2291\u0338 " + str(_type_right) + "\n")
+                return result
 
             case TYPE.TypesEnum.BIT_STRING:
                 if (_type_left.get_size() == _type_right.get_size()): # the lengths are the same

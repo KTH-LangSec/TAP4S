@@ -6,6 +6,7 @@ import logger as LOGGER
 
 
 def check(_Gamma_g, _Gamma_o):
+    checks_counter = 0
     for gamma_o in _Gamma_o:
         for i, t_gamma_g_1 in enumerate(_Gamma_g):
             for j, t_gamma_g_2 in enumerate(_Gamma_g):
@@ -17,10 +18,11 @@ def check(_Gamma_g, _Gamma_o):
                         GM.join_gamma(gamma_g_1, gamma_g_2)
                         LOGGER.debug("gamma_join:\n" + str(gamma_g_1))
                         LOGGER.debug("gamma_o:\n" + str(gamma_o))
+                        checks_counter += 1
                         if not GM.is_below(gamma_g_1, gamma_o):
-                            return False, (gamma_g_1, gamma_g_2, gamma_o)
+                            return False, (gamma_g_1, gamma_g_2, gamma_o), checks_counter
 
-    return True, None
+    return True, None, checks_counter
 
     # for gamma_o in _Gamma_o:
     #     for i, t_gamma_g_1 in enumerate(_Gamma_g):
