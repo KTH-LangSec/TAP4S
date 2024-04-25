@@ -23,12 +23,16 @@ if __name__ == '__main__':
     arg_parser.add_argument("-o", type=str, help="Address the of the output policy.")
     arg_parser.add_argument("-c", type=str, help="Address the of the contract.")
 
-    arg_parser.add_argument('-d', action='store_true', help='Enable debug mode (prints gammas)')
+    arg_parser.add_argument('-d', action='store_true', help='Debug mode - print the security checks')
+    arg_parser.add_argument('-g', action='store_true', help='Debug mode - print final Gamma')
 
     args = arg_parser.parse_args()
 
     if args.d:
-        setting.debug = True
+        setting.show_checks = True
+
+    if args.g:
+        setting.show_Gamma = True
 
     #############################################
     #################### AST ####################
@@ -156,11 +160,15 @@ if __name__ == '__main__':
     pruned_Gamma = GM.prune_invalid_gammas(final_Gamma)
     Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
-    # print()
-    # for i, (gg, gl) in enumerate(pruned_Gamma):
-    #     print("########## final gamma " + str(i+1) + ":")
-    #     print(gg)
-        # print(gg.get(LVAL.Variable("Opacket")))
+
+    #############################################
+    ############ Print Final Gamma ##############
+    #############################################
+    if setting.show_Gamma:
+        print()
+        for i, (gg, gl) in enumerate(pruned_Gamma):
+            print("########## Final gamma " + str(i+1) + ":")
+            print(gg)
 
     #############################################
     ############## Security Check ###############
