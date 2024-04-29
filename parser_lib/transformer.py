@@ -281,7 +281,7 @@ class P4Transformer(Transformer):
             size = None
             default_action = None
         elif (len(args) == 4):
-            if (type(args[4]) == int):
+            if (type(args[3]) == int):
                 name = args[0]
                 keys = args[1]
                 actions = args[2]
@@ -300,7 +300,6 @@ class P4Transformer(Transformer):
             size = args[3]
             default_action = args[4]
         return ast.TableDefinition(name, keys, actions, size, default_action)
-        #return {"stm_type" : "table_definition", "name": name, "keys": keys , "actions": actions, "size": size, "default_action":default_action}
 
     def table_keys_definition(self, *args):
         if (len(args) == 0):
