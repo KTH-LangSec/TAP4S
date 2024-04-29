@@ -1,4 +1,4 @@
 Ipacket:
-(0, 111) -> ([*], high);          /* ethernet */ // untrusted
-(111, 270) -> ([*], high);          /* ipv4 */ // untrusted
-(271, 278) -> ([*], low);          /* appID */ // trusted
+(0, 111) -> ([*], low);          /* ethernet */ // trusted
+(112, 271) -> ([*], low);          /* ipv4 */ // trusted
+(272, 279) -> ([*], high);          /* appID */ // untrusted

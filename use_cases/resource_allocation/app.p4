@@ -118,7 +118,7 @@ control MyIngress() {
 
     table application_resources {
 	    key = {
-	 	    hdr.ipv4.dstAddr: exact;
+            hdr.app.appID: exact;
 	    }
 	    actions = {
             allocate_resources;
@@ -154,7 +154,7 @@ control MyIngress() {
     }
 
     apply {
-        apply.application_resources [hdr.ipv4.dstAddr];
+        apply.application_resources [hdr.app.appID];
         apply.ipv4_lpm_forward [hdr.ipv4.dstAddr];
     }
 }
