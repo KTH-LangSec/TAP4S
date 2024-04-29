@@ -1,0 +1,37 @@
+// externs
+extern mark_to_drop:
+        true ->
+                (
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } >    // port 0
+                )
+
+// tables
+table application_resources:
+        true ->                                        
+                allocate_resources,
+                (
+                    priority: < bs[3], { (0, 2) -> ([*], low) } >,
+                    port: < bs[9], { (0, 8) -> ([1,511], low) } >   // any port other than 0
+                )
+
+
+table ipv4_lpm_forward:
+        hdr.ipv4.dstAddr[7:0] == 8w198 ->                                        
+                allocate_resources_using_subnet,
+                (
+                    priority: < bs[3], { (0, 2) -> ([7,7], low) } >,
+                    port: < bs[9], { (0, 8) -> ([1,511], low) } >   // any port other than 0
+                )
+
+        hdr.ipv4.dstAddr[7:0] != 8w198 ->                                             //otherwise
+                ipv4_forward, 
+                (
+                    dstAddr : < bs[48], { (0, 47) -> ([*], low) } >
+                )
+
+        false ->
+            drop, ()
+
+        false -> 
+                NoAction, ()
+
