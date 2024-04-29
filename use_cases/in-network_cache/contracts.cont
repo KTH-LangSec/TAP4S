@@ -1,0 +1,18 @@
+// tables
+table fetch_from_cache:
+        hdr.request.query <= 8w15 ->                                        
+                get_repsonse,
+                (
+                    value: < bs[32], { (0, 31) -> ([*], low) } >
+                )
+
+        hdr.request.query > 8w15 -> //otherwise
+                set_miss, ()
+
+
+table fetch_from_sever:
+        true ->                                        
+                get_repsonse,
+                (
+                    value: < bs[32], { (0, 31) -> ([*], low) } >
+                )
