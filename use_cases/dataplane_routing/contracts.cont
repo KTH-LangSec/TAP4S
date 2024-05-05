@@ -1,0 +1,16 @@
+// externs
+extern bfs_step:
+        true ->
+                (
+                    failures: < bs[32], { (0, 31) -> ([*], high) } >         // any value
+                )
+
+
+// tables
+table forward:
+        true ->                                    
+                forwarding, ()
+
+        false -> 
+                NoAction, ()
+

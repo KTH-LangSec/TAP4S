@@ -2,14 +2,14 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<16> TYPE_IPV4 = 0x800;
-const bit<32> NUM_LINKS = 10;
-const bit<32> THRESHOLD_1 = 10;
-const bit<32> THRESHOLD_2 = 5;
+const bit<16> TYPE_IPV4 = 0x0800;
+const bit<32> NUM_LINKS = 32w10;
+const bit<32> THRESHOLD_1 = 32w10;
+const bit<32> THRESHOLD_2 = 32w5;
 // Priorities range between 0-7; 7 being the highest priority.
-const bit<3> PRIO_1 = 7;
-const bit<3> PRIO_2 = 4;
-const bit<3> PRIO_3 = 2;
+const bit<3> PRIO_1 = 3w7;
+const bit<3> PRIO_2 = 3w4;
+const bit<3> PRIO_3 = 3w2;
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
@@ -41,10 +41,8 @@ header BFS {
 }
 
 header broadcast_t {
-
     bit<32> id;
     bit<32> type;
-
 }
 
 header ipv4_t {
@@ -65,7 +63,6 @@ header ipv4_t {
 
 struct metadata {
     bit<1> version;
-    /* empty */
 }
 
 struct headers {
@@ -82,6 +79,8 @@ struct standard_metadata_t {
 
 packet_in Ipacket;
 packet_out Opacket;
+
+bit<32> failures;
 
 headers hdr;
 metadata meta;
@@ -115,7 +114,7 @@ parser MyParser() {
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
 
-control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
+control MyVerifyChecksum() {
     apply {  }
 }
 
@@ -124,56 +123,56 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
 
-control MyIngress(inout headers hdr,
-                  inout metadata meta,
-                  inout standard_metadata_t standard_metadata) {
+control MyIngress() {
 
-    // TODO: lists?
-    _bit_count[NUM_LINKS] bits_set_in;  
-    //bit_count bits_set_in = {0, 1, 1, 2};
-    _stack[10] stack1;
-    _stack[10] stack2;
-    bit stack_id = 0;
-    bit<32> path_taken = hdr.bfs.path_taken;
-    bit<32> failures =  bits_set_in[path_taken].bits_at_i - hdr.bfs.num_hops;
-    action push_neighbor(bit<32> n, bit<32> n_visited) {
-        stack1.push_front(n);
-        hdr.bfs.visited_vec_for_bfs = hdr.bfs.visited_vec_for_bfs| n_visited;
-    }
+    /********************************************************/
+    /***************** Modeled as an extern *****************/
+    /********************************************************/
+    // _bit_count[NUM_LINKS] bits_set_in;
+    // _stack[10] stack1;
+    // _stack[10] stack2;
+    // bit stack_id = 0;
+    // bit<32> path_taken = hdr.bfs.path_taken;
+    // bit<32> failures =  bits_set_in[path_taken].bits_at_i - hdr.bfs.num_hops;
+    // action push_neighbor(bit<32> n, bit<32> n_visited) {
+    //     stack1.push_front(n);
+    //     hdr.bfs.visited_vec_for_bfs = hdr.bfs.visited_vec_for_bfs| n_visited;
+    // }
 
-    action pop_stack() {
-	   hdr.bfs.curr = stack1[0].elem;
-       stack1.pop_front(1);
-    }
+    // action pop_stack() {
+	//    hdr.bfs.curr = stack1[0].elem;
+    //    stack1.pop_front(1);
+    // }
 
-    action change_stack() {
-	    stack_id = ~stack_id; // TODO: what is ~?
-       	hdr.bfs.curr = stack1[0].elem;
-	    stack1.pop_front(1);
-    }
+    // action change_stack() {
+	//     stack_id = ~stack_id;
+    //    	hdr.bfs.curr = stack1[0].elem;
+	//     stack1.pop_front(1);
+    // }
 
     
-    table bfs_step { 
-        key={
-	        hdr.bfs.curr : exact;
-	        hdr.bfs.visited_vec_for_bfs : ternary;
-	        stack_id: exact;
-        } 
-        actions = {
-            push_neighbor; pop_stack; change_stack;
-        }
-    }
+    // table bfs_step { 
+    //     key={
+	//         hdr.bfs.curr : exact;
+	//         hdr.bfs.visited_vec_for_bfs : ternary;
+	//         stack_id: exact;
+    //     } 
+    //     actions = {
+    //         push_neighbor; pop_stack; change_stack;
+    //     }
+    // }
 
-    action forwarding(in bit<32> failure) {
-
-        if (failure >= THRESHOLD_1) {
+    action forwarding() {
+        if (failures >= THRESHOLD_1) {
             hdr.ipv4.priority = PRIO_1;
         }
-        else if (failure >= THRESHOLD_2) {
-           hdr.ipv4.priority = PRIO_2;
-        }
         else {
-           hdr.ipv4.priority = PRIO_3;
+            if (failures >= THRESHOLD_2) {
+                hdr.ipv4.priority = PRIO_2;
+            }
+            else {
+                hdr.ipv4.priority = PRIO_3;
+            }
         }
         // normal L2/L3 forwarding...
     }
@@ -182,17 +181,21 @@ control MyIngress(inout headers hdr,
 	    key = {
 	 	    hdr.bfs.next_node: exact;
 	    }
-	     actions = {forwarding(failures); NoAction;}
+	     actions = {
+            forwarding;
+            NoAction;
+        }
 	     default_action  = NoAction;
     }
 
      apply {
-        // if(hdr.bfs.curr != hdr.ipv4.dstAddr) {
-        //     bfs_step.apply();
-        // } 
-        // else {
-        //     forward.apply();
-        // }
+        if(hdr.bfs.curr != hdr.ipv4.dstAddr) {
+            bfs_step(failures); // Modeled as an extern
+        }
+        else {
+            apply.forward [hdr.bfs.next_node];
+        }
+        
     }
 }
 
@@ -200,9 +203,7 @@ control MyIngress(inout headers hdr,
 ****************  E G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
 
-control MyEgress(inout headers hdr,
-                 inout metadata meta,
-                 inout standard_metadata_t standard_metadata) {
+control MyEgress() {
     apply {  }
 }
 
@@ -210,7 +211,7 @@ control MyEgress(inout headers hdr,
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
 
-control MyComputeChecksum(inout headers hdr, inout metadata meta) {
+control MyComputeChecksum() {
      apply {
     }
 }
@@ -220,8 +221,11 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
-control MyDeparser(packet_out packet, in headers hdr) {
-    apply{}
+control MyDeparser() {
+    apply{
+        emit(Opacket, hdr.ethernet);
+        emit(Opacket, hdr.ipv4);
+    }
 }
 
 /*************************************************************************
