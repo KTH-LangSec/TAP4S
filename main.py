@@ -12,6 +12,7 @@ import contract_parser as CONTRACT
 import type_system_lib.types as TYPE
 import parser_lib as PARSER
 import type_system_lib.security_condition as SECURITY
+import input_process as INPUT
 
 import setting
 
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     arg_parser.add_argument("-p", type=str, help="Address the of the input policy.")
     arg_parser.add_argument("-o", type=str, help="Address the of the output policy.")
     arg_parser.add_argument("-c", type=str, help="Address the of the contract.")
+    arg_parser.add_argument("--dir", type=str, help="Address the of the directory containing a P4 program, input and output policy, and contracts.")
 
     arg_parser.add_argument('-d', action='store_true', help='Debug mode - print the security checks')
     arg_parser.add_argument('-g', action='store_true', help='Debug mode - print final Gamma')
@@ -34,44 +36,17 @@ if __name__ == '__main__':
     if args.g:
         setting.show_Gamma = True
 
-    #############################################
-    #################### AST ####################
-    #############################################
-    if args.i:
-        with open(args.i, 'r') as file:
-            input_program = file.read()
-    else:
-        print()
-        arg_parser.print_help()
-        print()
-        LOGGER.error("Please provide an input program!")
+    input_program, input_policy, output_policy, contracts = INPUT.arg_process(args.i, args.p, args.o, args.c, args.dir)
 
+
+    #################### AST ####################
     ast = PARSER.parse(input_program)
 
-
-    #############################################
     ################ Policy In ##################
-    #############################################
-    if args.p:
-        with open(args.p, 'r') as file:
-            file_contents = file.read()
-        policy_in_list = POLICIY.parse(file_contents)
-    else:
-        LOGGER.warning("no input policy was provided!")
-        policy_in_list = []
-        #default_policy = "Ipacket: (0,120) -> ([0,0], low);"
-        #policy_in_list = POLICIY.parse(default_policy)
+    policy_in_list = POLICIY.parse(input_policy)
 
-    #############################################
-    ################ Policy Out ##################
-    #############################################
-    if args.o:
-        with open(args.o, 'r') as file:
-            file_contents = file.read()
-        policy_out_list = POLICIY.parse(file_contents)
-    else:
-        LOGGER.warning("no output policy was provided!")
-        policy_out_list = []
+    ################ Policy Out #################
+    policy_out_list = POLICIY.parse(output_policy)
 
     Gamma_o = []
     if (len(policy_out_list) != 0):
@@ -85,16 +60,8 @@ if __name__ == '__main__':
 
             Gamma_o.append(gamma_o)
             
-    #############################################
     ################# Contract ##################
-    #############################################
-    if args.c:
-        with open(args.c, 'r') as file:
-            file_contents = file.read()
-        contracts_list = CONTRACT.parse(file_contents)
-    else:
-        LOGGER.warning("no contract file was provided!")
-        contracts_list = []
+    contracts_list = CONTRACT.parse(contracts)
 
     C = MP.Contracts()
     if (len(contracts_list) != 0):
@@ -104,9 +71,8 @@ if __name__ == '__main__':
             elif isinstance(cont, CONTRACT.contract.TableContract):
                 C.add_table(cont.get_name(), cont)
 
-    #############################################
+
     ################## Gamma ####################
-    #############################################
     B_g, gamma_g_init = TS.pre_proccess(ast)
     Gamma_g_init = []
 
@@ -142,15 +108,10 @@ if __name__ == '__main__':
         Gamma_g_init.append(gamma_g_init)
 
 
-    #############################################
     ################ Main Body ##################
-    #############################################
     main_ast = TS.get_main_body(ast)
 
-
-    #############################################
     ############### Type Check ##################
-    #############################################
     final_Gamma = []
     for gamma_g_init_with_policy in Gamma_g_init:
         Gamma = TS.type_check_ast(main_ast, gamma_g_init_with_policy, GM.LocalGamma(), LATIICE.Low(), B_g, MP.Local_B() , C)
@@ -161,9 +122,7 @@ if __name__ == '__main__':
     Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
 
-    #############################################
     ############ Print Final Gamma ##############
-    #############################################
     if setting.show_Gamma:
         print()
         for i, (gg, gl) in enumerate(pruned_Gamma):

@@ -5,15 +5,15 @@ GRAMMAR_FILE = "contract_parser/contract_grammar.lark"
 
 
 def parse(_contract_string):
-    with open(GRAMMAR_FILE, 'r') as file:
-        grammar = file.read()
+    if (_contract_string == ""):
+        return []
+    else:
+        with open(GRAMMAR_FILE, 'r') as file:
+            grammar = file.read()
 
-    parser = Lark(grammar,parser="lalr")
-    parse_tree = parser.parse(_contract_string)
-    contract_list = TRANSFORMER.ContractTransformer().transform(parse_tree)
+        parser = Lark(grammar,parser="lalr")
+        parse_tree = parser.parse(_contract_string)
+        contract_list = TRANSFORMER.ContractTransformer().transform(parse_tree)
 
-    # for i in contract_list:
-    #     print(i)
-
-    return contract_list
+        return contract_list
 

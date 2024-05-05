@@ -5,15 +5,15 @@ GRAMMAR_FILE = "policy_parser/policy_grammar.lark"
 
 
 def parse(_policy_string):
-    with open(GRAMMAR_FILE, 'r') as file:
-        grammar = file.read()
+    if (_policy_string == ""):
+        return []
+    else:
+        with open(GRAMMAR_FILE, 'r') as file:
+            grammar = file.read()
 
-    parser = Lark(grammar,parser="lalr")
-    policy_parse_tree = parser.parse(_policy_string)
-    policy_list = TRANSFORMER.PolicyTransformer().transform(policy_parse_tree)
-    
-    # for i in policy_list:
-    #     print(i)
+        parser = Lark(grammar,parser="lalr")
+        policy_parse_tree = parser.parse(_policy_string)
+        policy_list = TRANSFORMER.PolicyTransformer().transform(policy_parse_tree)
 
-    return policy_list
+        return policy_list
 
