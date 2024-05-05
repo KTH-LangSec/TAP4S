@@ -2,12 +2,15 @@
 #include <core.p4>
 #include <v1model.p4>
 
+const bit<16> TYPE_IPV4 = 0x0800;
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -15,24 +18,51 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<3>    priority;
+    bit<5>    service;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
 struct metadata {
     /* empty */
 }
 
-struct headers {
-    ethernet_t   ethernet;
+
+header alice {
+    bit<8> value;
 }
 
+header bob {
+    bit<8> value;
+}
 
+header telem_t {
+    bit<8> value;
+} 
+
+struct headers {
+    alice       alice_data;
+    bob         bob_data;
+    ethernet_t  ethernet;
+    ipv4_t      ipv4;
+    telem_t     telem;
+}
 
 /*****************************************************
 **************** EXPLICIT DEFINITIONS ****************
 ******************************************************/
 struct standard_metadata_t {
-    bit<9> ingress_port;
-    bit<9> egress_spec;
-    bit<9> egress_port;
-    bit<16> mcast_grp;
 }
 
 packet_in Ipacket;
@@ -42,6 +72,7 @@ headers hdr;
 metadata meta;
 standard_metadata_t standard_metadata;
 
+
 /*************************************************************************
 *********************** P A R S E R  ***********************************
 *************************************************************************/
@@ -49,19 +80,18 @@ standard_metadata_t standard_metadata;
 parser MyParser() {
 
     state start {
-        transition select () { 
-            default : parse_ethernet; 
-        }
-    }
-
-    state parse_ethernet {
+        extract(Ipacket, hdr.alice_data);
+        extract(Ipacket, hdr.bob_data);
         extract(Ipacket, hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            default: accept;
+        extract(Ipacket, hdr.ipv4);
+        extract(Ipacket, hdr.telem);
+        transition select() {
+            default : accept;
         }
     }
-}
 
+
+}
 
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
@@ -76,41 +106,33 @@ control MyVerifyChecksum() {
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
 
-control MyIngress() 
-{
+
+control Alice_Ingress() {
     
-    action drop() {
-        mark_to_drop(standard_metadata);
+    action set_by_alice(bit<8> val) {
+        if (val == 8w1){
+            hdr.alice_data.value = 8w1; // ALLOWED: Alice can update her fields
+        }
+        else {
+            hdr.alice_data.value = 8w0; // ALLOWED: Alice can update her fields
+        }
+
+        //hdr.bob_data.value = val; // VIOLATION: Alice should no write to Bob's fields
+        
+        //hdr.telem.value = hdr.telem.value + 8w1; // ALLOWED: modify telemetry using telemetry information
+        //hdr.alice_data.value = hdr.telem.value; // VIOLATION: leak telemetry information to Alice
     }
 
-    action multicast() {
-        standard_metadata.mcast_grp = 16w1;
-    }
-
-    action mac_forward(egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-        standard_metadata.mcast_grp = 16w0;
-    }
-
-    table mac_lookup {
+    table update_by_alice {
         key = {
-            hdr.ethernet.dstAddr : exact;
+            hdr.ethernet.dstAddr: exact;
         }
         actions = {
-            multicast;
-            mac_forward;
-            drop;
+            set_by_alice;
         }
-        size = 1024;
-        default_action = multicast;
     }
     apply {
-        bool ethernet_validity;
-        isValid(ethernet_validity, hdr.ethernet);
-        if (ethernet_validity)
-        {
-            apply.mac_lookup [hdr.ethernet.dstAddr];
-        }
+        apply.update_by_alice [hdr.ethernet.dstAddr];
     }
 }
 
@@ -119,18 +141,7 @@ control MyIngress()
 *************************************************************************/
 
 control MyEgress() {
-
-    action drop() {
-        mark_to_drop(standard_metadata);
-    }
-
-    apply {
-        // Prune multicast packet to ingress port to preventing loop
-        if (standard_metadata.egress_port == standard_metadata.ingress_port)
-        {
-            drop();
-        }
-    }
+    apply {  }
 }
 
 /*************************************************************************
@@ -138,7 +149,8 @@ control MyEgress() {
 *************************************************************************/
 
 control MyComputeChecksum() {
-     apply { }
+     apply {
+    }
 }
 
 
@@ -147,8 +159,12 @@ control MyComputeChecksum() {
 *************************************************************************/
 
 control MyDeparser() {
-    apply {
+    apply{
+        emit(Opacket, hdr.alice_data);
+        emit(Opacket, hdr.bob_data);
         emit(Opacket, hdr.ethernet);
+        emit(Opacket, hdr.ipv4);
+        emit(Opacket, hdr.telem);
     }
 }
 
@@ -156,10 +172,11 @@ control MyDeparser() {
 ***********************  S W I T C H  *******************************
 *************************************************************************/
 
+//switch architecture
 V1Switch(
 MyParser(),
 MyVerifyChecksum(),
-MyIngress(),
+Alice_Ingress(),
 MyEgress(),
 MyComputeChecksum(),
 MyDeparser()

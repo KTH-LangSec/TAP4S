@@ -1,0 +1,8 @@
+// tables
+table update_by_alice:
+        true ->                                        
+                set_by_alice,
+                (
+                    val: < bs[8], { (0, 7) -> ([*], low) } >   // any value but low since it is set by alice
+                )
+
