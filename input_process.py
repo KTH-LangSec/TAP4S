@@ -1,4 +1,5 @@
 import os
+import logger as LOGGER
 
 
 def arg_process(_arg_input, _arg_pin, _arg_pout, _arg_cont, _arg_dir):
@@ -20,9 +21,7 @@ def arg_process(_arg_input, _arg_pin, _arg_pout, _arg_cont, _arg_dir):
             with open(_arg_input, 'r') as file:
                 input_program = file.read()
         else:
-            print()
-            arg_parser.print_help()
-            LOGGER.error("\nPlease provide an input program!")
+            LOGGER.error("Please provide an input program!")
         
         ###### input policy
         if _arg_pin:
@@ -51,7 +50,6 @@ def arg_process(_arg_input, _arg_pin, _arg_pout, _arg_cont, _arg_dir):
 
 
 
-
 def open_file_with_extension(directory, extension):
     for filename in os.listdir(directory):
         if filename.endswith(extension):
@@ -59,4 +57,7 @@ def open_file_with_extension(directory, extension):
             with open(file_path, 'r') as file:
                 return file.read()
 
-    LOGGER.error("no file with " + str(extension) + " extension provided!")
+    if (extension == ".p4"):
+        LOGGER.error("Please provide an input program!")
+    else:
+        LOGGER.warning("no file with " + str(extension) + " extension was provided!")
