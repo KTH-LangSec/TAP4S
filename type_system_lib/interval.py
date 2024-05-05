@@ -90,7 +90,7 @@ def equal_operation(_lhs_interval, _rhs_interval):
 
     size = 1
 
-    if ((lmin == rmin) and (lmax == rmax)):
+    if ((lmin == lmax) and (rmin == rmax) and (lmin == rmin)): # the interval is just a single value and those values are equal
         return Interval(1, 1, size)
     elif ((rmin > lmax) or (lmin > rmax)):
         return Interval(0, 0, size)
