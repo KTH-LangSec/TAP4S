@@ -1,8 +1,11 @@
 // externs
 extern bfs_step:
-        true ->
+        true -> ()
+
+extern calculate_failures:
+        true -> 
                 (
-                    failures: < bs[32], { (0, 31) -> ([*], high) } >         // any value
+                    failures: < bs[32], { (0, 31) -> ([*], high) } >
                 )
 
 

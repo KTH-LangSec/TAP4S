@@ -189,8 +189,12 @@ control MyIngress() {
     }
 
      apply {
+        // Calculate the failures number
+        // Modeled as an extern
+        calculate_failures(failures, hdr.bfs.num_hops);
+
         if(hdr.bfs.curr != hdr.ipv4.dstAddr) {
-            bfs_step(failures); // Modeled as an extern
+            bfs_step(); // Modeled as an extern
         }
         else {
             apply.forward [hdr.bfs.next_node];
