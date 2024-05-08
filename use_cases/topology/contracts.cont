@@ -1,0 +1,30 @@
+// externs
+extern mark_to_drop:
+        true ->
+                (
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } >    // port 0
+                )
+
+
+// tables
+table virtual2orig_topology:
+        true ->                                    
+                update_to_orig_topology, 
+                (
+                    orig_dstAddr: < bs[32], { (0, 31) -> ([*], high) } >,               // any address
+                    new_ttl: < bs[8], { (0, 7) -> ([*], high) } >                       // any time-to-live
+                )
+
+
+table ipv4_lpm_forward:
+        true ->                                    
+                ipv4_forward, 
+                (
+                    dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,             // any address
+                    port: < bs[9], { (0, 8) -> ([1,511], low) } >               // ports 1-511
+                )
+        
+        false -> drop, ()
+
+        false -> NoAction, ()
+
