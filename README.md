@@ -1,9 +1,9 @@
 # P4 Type Checker
 
 ## Requirements
-- Make use you have Python installed.
+- Make sure you have Python installed.
     - This tool was develop using Python `3.11` and it might not work on older versions of Python. 
-- This tool relies on the [Lark](https://github.com/lark-parser/lark) parser library for Python, which can be installed as follows:
+- This tool relies on the [Lark](https://github.com/lark-parser/lark) parser library which can be installed as follows:
 ```
 pip install lark
 ```
