@@ -25,7 +25,7 @@ python main.py [options]
 -g          Debug mode - print final Gamma
 ```
 
-- The `usecases` directory contains the use cases presented in the paper.
+- The `use_cases` directory contains the use cases presented in the paper.
 - For example the `basic_tuneling` example can be checked by running the following command:
 ```
 python main.py -i ./use_cases/basic_tunnel/basic_tunnel.p4 -p ./use_cases/basic_tunnel/inputPolicy.pin -c ./use_cases/basic_tunnel/contracts.cont -o ./use_cases/basic_tunnel/outputPolicy.pout
