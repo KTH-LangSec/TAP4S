@@ -1,0 +1,9 @@
+// externs
+extern mark_to_drop:
+        true ->
+                (
+                    standard_metadata.egress_spec: < bs[9], { (0, 8) -> ([0,0], low) } >    // port 0
+                )
+
+
+
