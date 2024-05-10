@@ -1,5 +1,6 @@
 import argparse
 import copy
+import time
 
 import type_system_lib as TS
 import type_system_lib.label as LATIICE
@@ -27,6 +28,7 @@ if __name__ == '__main__':
 
     arg_parser.add_argument('-d', action='store_true', help='Debug mode - print the security checks')
     arg_parser.add_argument('-g', action='store_true', help='Debug mode - print final Gamma')
+    arg_parser.add_argument('-t', action='store_true', help='Print timing information')
 
     args = arg_parser.parse_args()
 
@@ -36,8 +38,13 @@ if __name__ == '__main__':
     if args.g:
         setting.show_Gamma = True
 
+    if args.t:
+        setting.show_timing = True
+
     input_program, input_policy, output_policy, contracts = INPUT.arg_process(args.i, args.p, args.o, args.c, args.dir)
 
+
+    start_time_total = time.perf_counter() # timing
 
     #################### AST ####################
     ast = PARSER.parse(input_program)
@@ -73,6 +80,8 @@ if __name__ == '__main__':
 
 
     ################## Gamma ####################
+    start_time_gamma_gen = time.perf_counter() # timing
+
     B_g, gamma_g_init = TS.pre_proccess(ast)
     Gamma_g_init = []
 
@@ -107,16 +116,20 @@ if __name__ == '__main__':
     else:
         Gamma_g_init.append(gamma_g_init)
 
+    end_time_gamma_gen = time.perf_counter() # timing
 
     ################ Main Body ##################
     main_ast = TS.get_main_body(ast)
 
     ############### Type Check ##################
+    start_time_type_check = time.perf_counter() # timing
+
     final_Gamma = []
     for gamma_g_init_with_policy in Gamma_g_init:
         Gamma = TS.type_check_ast(main_ast, gamma_g_init_with_policy, GM.LocalGamma(), LATIICE.Low(), B_g, MP.Local_B() , C)
         final_Gamma.extend(Gamma)
 
+    end_time_type_check = time.perf_counter() # timing
 
     pruned_Gamma = GM.prune_invalid_gammas(final_Gamma)
     Gamma_g = [gg for (gg, gl) in pruned_Gamma]
@@ -132,21 +145,40 @@ if __name__ == '__main__':
     #############################################
     ############## Security Check ###############
     #############################################
+    start_time_security_check = time.perf_counter() # timing
+
     verdict, gammas, checks = SECURITY.check(Gamma_g, Gamma_o)
 
-    LOGGER.print_blue("\n>>>>>> ["+ str(len(pruned_Gamma)) +"] GAMMAS", end="")
-    LOGGER.print_blue("\n>>>>>> ["+ str(checks) +"] CHECKS", end="")
-    LOGGER.print_blue("\n>>>>>> VERDICT >>>>>> ", end="")
+    LOGGER.print_blue("\n>>>>>> Generated Gammas: "+ str(len(pruned_Gamma)), end="")
+    LOGGER.print_blue("\n>>>>>> Performed Checks: "+ str(checks), end="")
+    LOGGER.print_blue("\n>>>>>> Verdict: ", end="")
     if verdict:
-        LOGGER.print_green("\tSECURE ✓")
+        LOGGER.print_green("SECURE ✓")
     else:
-        LOGGER.print_red("\tINSECURE ✗")
+        LOGGER.print_red("INSECURE ✗")
         print("-"*21)
         print("gamma_1:\n", gammas[0])
         print("gamma_2:\n", gammas[1])
         print("gamma_o:\n", gammas[2])
 
+    end_time_security_check = time.perf_counter() # timing
 
-    
+    ################## Timing ###################
+    end_time_total = time.perf_counter()
+
+    if (setting.show_timing):
+        execution_time_total = (end_time_total - start_time_total)  * 1000
+        execution_time_gamma_gen = (end_time_gamma_gen - start_time_gamma_gen)  * 1000
+        execution_time_type_check = (end_time_type_check - start_time_type_check)  * 1000
+        execution_time_security_check = (end_time_security_check - start_time_security_check)  * 1000
+
+        print()
+        print("-"*30)
+        print("{:<20} {:<10}".format("Task", "Time"))
+        print("-"*30)
+        print("{:<20} {:<10}".format("Total", round(execution_time_total, 2)))
+        print("{:<20} {:<10}".format("Gamma Generation", round(execution_time_gamma_gen, 2)))
+        print("{:<20} {:<10}".format("Type Checking", round(execution_time_type_check, 2)))
+        print("{:<20} {:<10}".format("Security Check", round(execution_time_security_check, 2)))
 
 
