@@ -1,0 +1,10 @@
+standard_metadata:
+(0, 8) -> ([*], low);           /* egress_spec */
+(9, 27) -> ([*], high);         /* deq_qdepth */
+
+Ipacket:
+(0, 111) -> ([*], low);         /* ethernet_t */
+(112, 271) -> ([*], low);       /* ipv4_t */
+(272, 287) -> ([*], low);       /* ipv4_option_t */
+(288, 303) -> ([*], low);       /* mri_t */
+(304, 354) -> ([*], low);       /* switch_t */

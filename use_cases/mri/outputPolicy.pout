@@ -1,0 +1,30 @@
+Opacket:
+(0, 111) -> ([*], low);             /* ethernet_t */
+(112, 239) -> ([*], low);           /* ipv4_t up to dstAddr */
+(240, 247) -> ([0,197], low);       /* first 8 bit of dstAddr */
+(248, 271) -> ([*], low);           /* rest of ipv4_t */
+(272, 287) -> ([*], low);           /* ipv4_option_t */
+(288, 303) -> ([*], low);           /* mri_t */
+(304, 354) -> ([*], low);           /* switch_t */
+
+| 
+
+Opacket:
+(0, 111) -> ([*], low);             /* ethernet_t */
+(112, 239) -> ([*], low);           /* ipv4_t up to dstAddr */
+(240, 247) -> ([198,198], low);       /* first 8 bit of dstAddr */
+(248, 271) -> ([*], low);           /* rest of ipv4_t */
+(272, 287) -> ([*], low);           /* ipv4_option_t */
+(288, 303) -> ([*], low);           /* mri_t */
+(304, 354) -> ([*], high);           /* switch_t */
+
+|
+
+Opacket:
+(0, 111) -> ([*], low);             /* ethernet_t */
+(112, 239) -> ([*], low);           /* ipv4_t up to dstAddr */
+(240, 247) -> ([199,255], low);       /* first 8 bit of dstAddr */
+(248, 271) -> ([*], low);           /* rest of ipv4_t */
+(272, 287) -> ([*], low);           /* ipv4_option_t */
+(288, 303) -> ([*], low);           /* mri_t */
+(304, 354) -> ([*], low);           /* switch_t */
