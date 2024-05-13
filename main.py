@@ -80,8 +80,6 @@ if __name__ == '__main__':
 
 
     ################## Gamma ####################
-    start_time_gamma_gen = time.perf_counter() # timing
-
     B_g, gamma_g_init = TS.pre_proccess(ast)
     Gamma_g_init = []
 
@@ -115,8 +113,6 @@ if __name__ == '__main__':
             Gamma_g_init.append(gamma_tmp)
     else:
         Gamma_g_init.append(gamma_g_init)
-
-    end_time_gamma_gen = time.perf_counter() # timing
 
     ################ Main Body ##################
     main_ast = TS.get_main_body(ast)
@@ -168,16 +164,14 @@ if __name__ == '__main__':
 
     if (setting.show_timing):
         execution_time_total = (end_time_total - start_time_total)  * 1000
-        execution_time_gamma_gen = (end_time_gamma_gen - start_time_gamma_gen)  * 1000
         execution_time_type_check = (end_time_type_check - start_time_type_check)  * 1000
         execution_time_security_check = (end_time_security_check - start_time_security_check)  * 1000
 
         print()
         print("-"*30)
-        print("{:<20} {:<10}".format("Task", "Time"))
+        print("{:<20} {:<10}".format("Task", "Time (ms)"))
         print("-"*30)
         print("{:<20} {:<10}".format("Total", round(execution_time_total, 2)))
-        print("{:<20} {:<10}".format("Gamma Generation", round(execution_time_gamma_gen, 2)))
         print("{:<20} {:<10}".format("Type Checking", round(execution_time_type_check, 2)))
         print("{:<20} {:<10}".format("Security Check", round(execution_time_security_check, 2)))
 
