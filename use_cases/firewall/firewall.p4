@@ -5,14 +5,7 @@
 /* CONSTANTS */
 
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<8>  TYPE_TCP  = 6;
-
-// #define BLOOM_FILTER_ENTRIES 4096
-const bit<32> BLOOM_FILTER_ENTRIES = 32w4096;
-// #define BLOOM_FILTER_BIT_WIDTH 1
-
-const bit<2> BF_ID_1 = 2w1;
-const bit<2> BF_ID_2 = 2w2;
+const bit<8>  TYPE_TCP  = 8w6;
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -85,6 +78,8 @@ struct standard_metadata_t {
 packet_in Ipacket;
 packet_out Opacket;
 
+bit<1> direction;
+
 headers hdr;
 metadata meta;
 standard_metadata_t standard_metadata;
@@ -137,36 +132,10 @@ control MyVerifyChecksum() {
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
-// Global variables
-bit<1> direction; 
-bit<32> reg_pos_one; 
-bit<32> reg_pos_two;
-bit<1> reg_val_one; 
-bit<1> reg_val_two;
-
 control MyIngress() {
-    /************** Bloom filter is modeled as an extern **************/
-    // register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_1;
-    // register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter_2;
 
     action drop() {
         mark_to_drop(standard_metadata);
-    }
-
-    action compute_hashes(ip4Addr_t ipAddr1, ip4Addr_t ipAddr2, bit<16> port1, bit<16> port2){
-       //Get register position
-       hash(reg_pos_one, HashAlgorithm.crc16, 32w0, ipAddr1, 
-                                                    ipAddr2, 
-                                                    port1, 
-                                                    port2, 
-                                                    hdr.ipv4.protocol, 
-                                                    BLOOM_FILTER_ENTRIES);
-       hash(reg_pos_two, HashAlgorithm.crc32, 32w0, ipAddr1, 
-                                                    ipAddr2, 
-                                                    port1, 
-                                                    port2, 
-                                                    hdr.ipv4.protocol, 
-                                                    BLOOM_FILTER_ENTRIES);
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
@@ -197,7 +166,6 @@ control MyIngress() {
     table check_ports {
         key = {
             standard_metadata.ingress_port: exact;
-            standard_metadata.egress_spec: exact;
         }
         actions = {
             set_direction;
@@ -218,48 +186,20 @@ control MyIngress() {
             isValid(tcp_validity, hdr.tcp);
 
             if (tcp_validity) {
+                // Check ports to get the direction of the packets
+                apply.check_ports [standard_metadata.ingress_port];
 
-                direction = 1w0; // default
-                bool isHit;
-                hit(isHit, check_ports); // replacing `check_ports.apply().hit`
-                if (isHit) {
-                    // test and set the bloom filter
-                    if (direction == 1w0) {
-                        compute_hashes(hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort);
-                    }
-                    else {
-                        compute_hashes(hdr.ipv4.dstAddr, hdr.ipv4.srcAddr, hdr.tcp.dstPort, hdr.tcp.srcPort);
-                    }
-                    // Packet comes from internal network
-                    if (direction == 1w0) {
-                        // If there is a syn we update the bloom filter and add the entry
-                        if (hdr.tcp.syn == 1w1) {
-                            // bloom_filter_1.write(reg_pos_one, 1);
-                            // bloom_filter_2.write(reg_pos_two, 1);
-                            // Bloom filter is modeled as an extern
-                            bloom_filter_write(reg_pos_one, 1w1)
-                            bloom_filter_write(reg_pos_two, 1w1)
-                        }
-                    }
-                    // Packet comes from outside
-                    else {
-                        if (direction == 1w1) {
-                            // Read bloom filter cells to check if there are 1's
-
-                            // bloom_filter_1.read(reg_val_one, reg_pos_one);
-                            // bloom_filter_2.read(reg_val_two, reg_pos_two);
-                            // Bloom filter is modeled as an extern
-                            bloom_filter_read(reg_val_one, reg_pos_one)
-                            bloom_filter_read(reg_val_two, reg_pos_two)
-
-                            // only allow flow to pass if both entries are set
-                            if ((reg_val_one != 1w1) || (reg_val_two != 1w1)){
-                                drop();
-                            }
-                        }
+                // Packet comes from outside
+                if (direction == 1w1) {
+                    // only allow ssh conncetions from outside
+                    if (hdr.tcp.srcPort != 16w22){
+                        drop();
                     }
                 }
             }
+        }
+        else { // drop the non-ipv4 packets
+            drop();
         }
     }
 }
@@ -279,7 +219,7 @@ control MyEgress() {
 control MyComputeChecksum() {
      apply {
         update_checksum(
-            hdr.ipv4.isValid(),
+            ipv4_validity,
             hdr.ipv4.version,
             hdr.ipv4.ihl,
             hdr.ipv4.diffserv,

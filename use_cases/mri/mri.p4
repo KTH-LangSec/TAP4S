@@ -215,7 +215,9 @@ control MyEgress() {
     }
 
     table swtrace {
-        key = {}
+        key = { 
+            standard_metadata.egress_spec: exact; 
+        }
         actions = {
             add_swtrace;
             NoAction;
@@ -228,7 +230,7 @@ control MyEgress() {
         isValid(mri_validity, hdr.mri);
 
         if (mri_validity) {
-            apply.swtrace [];
+            apply.swtrace [standard_metadata.egress_spec];
         }
     }
 }

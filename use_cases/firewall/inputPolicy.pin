@@ -1,3 +1,49 @@
+standard_metadata:
+(0, 8) -> ([1,3], low);          /* ingress_port */
+(9, 17) -> ([*], low);          /* egress_spec */
+
 Ipacket:
 (0, 111) -> ([*], low);          /* ethernet */
-(112, 271) -> ([*], low);          /* ipv4 */
+(112, 239) -> ([*], low);          /* ipv4 up to dstAddr */
+(240, 271) -> ([*], low);          /* ipv4 dstAddr */
+(272, 287) -> ([*], low);          /* tcp_t srcPort */
+(288, 451) -> ([*], low);          /* rest of tcp_t */
+
+|
+
+standard_metadata:
+(0, 8) -> ([4,4], low);          /* ingress_port */
+(9, 17) -> ([*], low);          /* egress_spec */
+
+Ipacket:
+(0, 111) -> ([*], low);          /* ethernet */
+(112, 239) -> ([*], low);          /* ipv4 up to dstAddr */
+(240, 271) -> ([*], low);          /* ipv4 dstAddr */
+(272, 287) -> ([22,22], low);          /* tcp_t srcPort */
+(288, 451) -> ([*], low);          /* rest of tcp_t */
+
+|
+
+standard_metadata:
+(0, 8) -> ([4,4], low);          /* ingress_port */
+(9, 17) -> ([*], low);          /* egress_spec */
+
+Ipacket:
+(0, 111) -> ([*], low);          /* ethernet */
+(112, 239) -> ([*], low);          /* ipv4 up to dstAddr */
+(240, 271) -> ([*], low);          /* ipv4 dstAddr */
+(272, 287) -> ([0,21], low);          /* tcp_t srcPort */
+(288, 451) -> ([*], high);          /* rest of tcp_t */
+
+|
+
+standard_metadata:
+(0, 8) -> ([4,4], low);          /* ingress_port */
+(9, 17) -> ([*], low);          /* egress_spec */
+
+Ipacket:
+(0, 111) -> ([*], low);          /* ethernet */
+(112, 239) -> ([*], low);          /* ipv4 up to dstAddr */
+(240, 271) -> ([*], low);          /* ipv4 dstAddr */
+(272, 287) -> ([23,65535], low);          /* tcp_t srcPort */
+(288, 451) -> ([*], high);          /* rest of tcp_t */

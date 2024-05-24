@@ -1,3 +1,9 @@
+standard_metadata:
+(0, 8) -> ([*], low);          /* ingress_port */
+(9, 17) -> ([1,511], low);          /* egress_spec */
+
 Opacket:
 (0, 111) -> ([*], low);          /* ethernet */
 (112, 271) -> ([*], low);          /* ipv4 */
+(272, 287) -> ([*], low);          /* tcp_t srcPort */
+(288, 451) -> ([*], low);          /* rest of tcp_t */
