@@ -377,11 +377,11 @@ class Slice():
     def set_interval(self, _interval):
         self.interval = _interval
 
-    def split(self, _split_index):
+    def split(self, _split_index, _conservative=False):
         split_index = _split_index - self.start
 
         if (split_index <= 0):
-            keep_slc = Slice(0, self.size, INTERVAL.Interval(self.interval.get_min(), self.interval.get_max(), self.size), self.label)
+            keep_slc = Slice(0, self.size - 1, INTERVAL.Interval(self.interval.get_min(), self.interval.get_max(), self.size), self.label)
             return (None, keep_slc)
 
         length = self.size
@@ -413,10 +413,16 @@ class Slice():
         r_max_val = (2 ** k_size) - 1
         
         if (int(b, 2) > int(d, 2)): # the interval is [max, min]
+            if (_conservative):
+                LOGGER.print_red(str(self) + " sliced at " + str(_split_index))
+                LOGGER.error("The slicing overapproximates and cannot be used in the policy! [MAX, MIN]")
             k_min = 0
             k_max = r_max_val
         else:
             if xor_binary(a, c): # xor of first part was one, so there was a loop
+                if (_conservative):
+                    LOGGER.print_red(str(self) + " sliced at " + str(_split_index))
+                    LOGGER.error("The slicing overapproximates and cannot be used in the policy! [LOOP]")
                 k_min = 0
                 k_max = r_max_val
             else:
@@ -451,6 +457,8 @@ def xor_binary(binary1, binary2):
     num1 = int(binary1, 2)
     num2 = int(binary2, 2)
     
-    result = num1 ^ num2
-    
-    return result != 0
+    if (num1 == 0) and (num2 == int(len(binary2) * "1", 2)):
+        return False
+    else:
+        result = num1 ^ num2
+        return result != 0

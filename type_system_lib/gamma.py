@@ -519,21 +519,28 @@ def is_empty_intersect_sub_slice(_slc, _overlap):
     s_start, s_end = _slc.get_slice_indices()
     o_start, o_end = _overlap.get_slice_indices()
 
-    if o_start > s_start:
-        start = o_start-1
+    if o_start == s_start:
+        start = o_start
+        _, start_split_slc = _slc.split(0)
+        _, start_split_overlap = _overlap.split(0)
+    elif o_start > s_start:
+        start = o_start
         _, start_split_slc = _slc.split(start)
         _, start_split_overlap = _overlap.split(0)
     else:
-        start = s_start-1
+        start = s_start
         _, start_split_slc = _slc.split(0)
         _, start_split_overlap = _overlap.split(start)
 
-    if o_end > s_end:
-        end = s_end - start
+    if o_end == s_end:
+        end_split_slc = start_split_slc
+        end_split_overlap = start_split_overlap
+    elif o_end > s_end:
+        end = s_end - start + 1
         end_split_slc = start_split_slc
         end_split_overlap, _ = start_split_overlap.split(end)
     else:
-        end = o_end - start
+        end = o_end - start + 1
         end_split_slc, _ = start_split_slc.split(end)
         end_split_overlap = start_split_overlap
 
@@ -541,120 +548,10 @@ def is_empty_intersect_sub_slice(_slc, _overlap):
     interval_2 = end_split_overlap.get_interval()
     intersect_interval = INTERVAL.intersect(interval_1, interval_2)
 
-    # print("-"*20)
-    # print(interval_1, interval_2, intersect_interval)
-
     if (intersect_interval == None): # check if there is actually any intersection
         return True
     
     return False
-
-
-############################################################
-############# GET INTERVAL INTERSET $\cap$ #################
-############################################################
-# def intersect_Gammas(_Gamma_list):
-#     result = []
-#     for i in range(len(_Gamma_list)):
-#         for j in range(len(_Gamma_list)):
-#             if (i != j):
-#                 (gg_1, gg_2) = intersect_gamma(_Gamma_list[i][0], _Gamma_list[j][0])
-#                 if (gg_1 != None) and (gg_2 != None):
-#                     (gl_1, gl_2) = intersect_gamma(_Gamma_list[i][1], _Gamma_list[j][1])
-#                     if (gl_1 != None) and (gl_2 != None):
-#                         result.append((gg_1, gl_1)) # to avoid duplication, just the first gammas are added
-#                     else:
-#                         return []
-#                 else:
-#                     return [] 
-
-#     return result
-            
-# def intersect_gamma(_gamma_1, _gamma_2):
-#     if not (_gamma_1.has_same_domain_as(_gamma_2)):
-#         LOGGER.error("Cannot intersect two gammas with different domains!")
-#     else:
-#         cp_gamma_1 = copy.deepcopy(_gamma_1)
-#         cp_gamma_2 = copy.deepcopy(_gamma_2)
-#         for lval in cp_gamma_1.get_keys():
-#             type_1 = cp_gamma_1.get(lval)
-#             type_2 = cp_gamma_2.get(lval)
-#             t1, t2 = intersect_type(type_1, type_2)
-#             if (t1 != None) and (t2 != None):
-#                 cp_gamma_1.update(lval, t1)
-#                 cp_gamma_2.update(lval, t2)
-#             else:
-#                 return (None, None)
-
-#         return (cp_gamma_1, cp_gamma_2)
-
-# def intersect_type(_type_1, _type_2):
-#     if (_type_1.get_type() != _type_2.get_type()):
-#         LOGGER.warning("intersect of " + str(_type_1.get_type()) + " and " + str(_type_2.get_type()) + " will be empty!")
-#         return (None, None)
-#     else:
-#         match _type_1.get_type():
-#             case TYPE.TypesEnum.BOOL:
-#                 interval_1 = _type_1.get_interval()
-#                 interval_2 = _type_2.get_interval()
-#                 intersect_interval = INTERVAL.intersect(interval_1, interval_2)
-#                 if (intersect_interval != None):
-#                     _type_1.set_interval(intersect_interval)
-#                     _type_2.set_interval(intersect_interval)
-#                     return(_type_1, _type_2)
-#                 else:
-#                     return (None, None)
-
-#             case TYPE.TypesEnum.BIT_STRING:
-#                 if (_type_1.get_size() == _type_2.get_size()): # the lengths are the same
-#                     if (_type_1.has_same_slices_as(_type_2)):
-#                         for i, slc in enumerate(_type_1.get_slices()):
-#                             interval_1 = slc.get_interval()
-#                             interval_2 = _type_2.get_slice(i).get_interval()
-#                             intersect_interval = INTERVAL.intersect(interval_1, interval_2)
-                            
-#                             if (intersect_interval == None): # check if there is actually any intersection
-#                                 return (None, None)
-#                             slc.set_interval(intersect_interval)
-#                             _type_2.get_slice(i).set_interval(intersect_interval)
-
-#                         return(_type_1, _type_2)
-#                     else:
-#                         LOGGER.warning("intersect of two bit-strings with different slices is highly overapproximating!")
-#                         size = _type_1.get_size()
-#                         intersect_interval = INTERVAL.Interval(0, ((2 ** size) - 1), size)
-#                         if (intersect_interval == None): # check if there is actually any intersection
-#                             return (None, None)
-                        
-#                         label_1 = _type_1.get_label()
-#                         slice_1 = TYPE.Slice(0, size-1, intersect_interval, label_1)
-#                         _type_1.update_slices([slice_1])
-
-#                         label_2 = _type_2.get_label()
-#                         slice_2 = TYPE.Slice(0, size-1, intersect_interval, label_2)
-#                         _type_2.update_slices([slice_2])
-
-#                         return(_type_1, _type_2)
-#                 else: # the lengths are NOT the same
-#                     LOGGER.warning("intersect of two bit-strings with different lengths will be empty!")
-#                     return (None, None)
-
-
-#             case TYPE.TypesEnum.STRUCT:
-#                 if (_type_1.has_the_same_fields_as(_type_2)):
-#                     for name, fld in _type_1.get_fields():
-#                         join_type(fld, _type_2.get_field(name))
-#                 else:
-#                     LOGGER.warning("intersect of two two structs with different fields will be empty!")
-#                     return (None, None)
-
-#             case TYPE.TypesEnum.HEADER:
-#                 if (_type_1.has_the_same_fields_as(_type_2)):
-#                     for name, fld in _type_1.get_fields():
-#                         join_type(fld, _type_2.get_field(name))
-#                 else:
-#                     LOGGER.warning("intersect of two two headers with different fields will be empty!")
-#                     return (None, None)
 
 ############################################################
 ###################### Ordering ⊑ ##########################
@@ -663,7 +560,7 @@ def is_below(_gamma_left, _gamma_right):
     gamma_left = _gamma_left.project(_gamma_right.get_keys())
 
     if not (_gamma_right.has_same_domain_as(gamma_left)):
-        LOGGER.warning("cannot check gamma_g ⊑ gamma_o -- there are some variables in \"gamma_o\" that are not in \"gamma_g\"!")
+        LOGGER.print_red("cannot check γ_g ⊑ γ_o -- there are some variables in \"γ_o\" that are not in \"γ_g\"!")
         return False
     else:
         for lval in gamma_left.get_keys():
@@ -676,13 +573,19 @@ def is_below(_gamma_left, _gamma_right):
 
 def is_type_below(_type_left, _type_right):
     if (_type_left.get_type() != _type_right.get_type()):
-        return _type_left.get_label().is_below(_type_right.get_label())
+        if _type_left.get_label().is_below(_type_right.get_label()):
+            return True
+        else:
+            LOGGER.print_red("The types are NOT the same!")
+            LOGGER.print_red(str(_type_left))
+            LOGGER.print_red("\u2291\u0338")
+            LOGGER.print_red(str(_type_right))
+            return False
     else:
         match _type_left.get_type():
             case TYPE.TypesEnum.BOOL:
                 result = _type_left.get_label().is_below(_type_right.get_label())
                 if not result:
-                    LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
                     LOGGER.print_red(str(_type_left) + " \u2291\u0338 " + str(_type_right) + "\n")
                 return result
 
@@ -694,7 +597,6 @@ def is_type_below(_type_left, _type_right):
                             lebel_right = _type_right.get_slice(i).get_label()
                             
                             if (not lebel_left.is_below(lebel_right)):
-                                LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
                                 LOGGER.print_red(str(slc) + " \u2291\u0338 " + str(_type_right.get_slice(i)) + "\n")
                                 return False
 
@@ -705,18 +607,25 @@ def is_type_below(_type_left, _type_right):
                             overlaps = _type_right.get_overlapping_slices(slc)
 
                             if (len(overlaps) <= 0):
+                                LOGGER.print_red("For slice " + str(slc) + " no overlap was found in the " + str(_type_right))
                                 return False
                             else:
                                 for overlap in overlaps:
                                     if (not slc.get_label().is_below(overlap.get_label())):
-                                        LOGGER.print_blue("\n>>>>>> CHECK FAIL:")
                                         LOGGER.print_red(str(slc) + " \u2291\u0338 " + str(overlap) + "\n")
                                         return False
 
                         return True
                     
                 else: # the lengths are NOT the same
-                    return _type_left.get_label().is_below(_type_right.get_label())
+                    if _type_left.get_label().is_below(_type_right.get_label()):
+                        return True
+                    else:
+                        LOGGER.print_red("The lengths of bit-strings is NOT the same")
+                        LOGGER.print_red(str(_type_left))
+                        LOGGER.print_red("\u2291\u0338")
+                        LOGGER.print_red(str(_type_right))
+                        return False
 
 
             case TYPE.TypesEnum.STRUCT:

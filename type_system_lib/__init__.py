@@ -87,10 +87,11 @@ def type_check_statement(_stm, _gamma_g, _gamma_l, _pc, _B_g, _B_l, _C):
                 cont = _C.get_extern(f_name)
                 Gamma_f = []
 
+                # TODO: We need local gamma for externs too.
                 for pred, gamma_t in cont.get().items():
                     ref_Gamma = GM.refine(_gamma_g, _gamma_l, pred, LATTICE.Low())
                     if (ref_Gamma != None):
-                        gamma_t.raise_types(_pc)
+                        gamma_t.raise_types(_pc) # TODO: What if the input label is high and the return type is low?
                         for (ref_gamma_g, ref_gamma_l) in ref_Gamma:
                             GM.augment(ref_gamma_g, ref_gamma_l, gamma_t, f_args)
                             Gamma_f.append((ref_gamma_g, ref_gamma_l))

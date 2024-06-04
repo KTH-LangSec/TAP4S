@@ -61,6 +61,13 @@ def intersect(_lhs_interval, _rhs_interval):
     return Interval(n_min, n_max, size)
 
 
+def is_subset(_lhs_interval, _rhs_interval):
+    if (_lhs_interval.min >= _rhs_interval.min) and (_lhs_interval.max <= _rhs_interval.max):
+        return True
+    else:
+        return False
+
+
 ##################################################################
 ##################### BS2BS HELPER FUNCTIONS #####################
 ##################################################################
