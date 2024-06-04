@@ -14,14 +14,14 @@ table ipv4_lpm:
         hdr.ipv4.dstAddr[7:0] == 8w198 ->                                       // 198.*.*.*
             ipv4_forward,
             (
-                dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any address
+                dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any mac address
                 port: < bs[9], { (0, 8) -> ([1,9], low) } >                     // ports 1-9
             )
 
         hdr.ipv4.dstAddr[7:0] != 8w198 ->                                       //otherwise
             ipv4_forward,
             (
-                dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any address
+                dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any mac address
                 port: < bs[9], { (0, 8) -> ([10,20], low) } >                   // ports 10-20
             )
 
