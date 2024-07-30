@@ -1,0 +1,6 @@
+standard_metadata:
+(0, 8) -> ([10,20], low);       /* egress_spec */
+(9, 27) -> ([*], high);         /* enq_qdepth */
+
+Opacket:
+(0, 271) -> ([*], low);         /* packet */

@@ -1,0 +1,80 @@
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2048, 2048], low);       /* etherType is IPv4 */
+(112, 125) -> ([*], low);               /* rest of the packet up to ecn */
+(126, 127) -> ([*], high);              /* ecn */
+(128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
+(209, 216) -> ([192,192], low);         /* first 8 bit of srcAddr */
+(217, 224) -> ([168,168], low);         /* second 8 bit of srcAddr */
+(225, 271) -> ([*], low);               /* est of the packet */
+
+| 
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2048, 2048], low);       /* etherType is IPv4 */
+(112, 125) -> ([*], low);               /* rest of the packet up to ecn */
+(126, 127) -> ([*], low);              /* ecn */
+(128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
+(209, 216) -> ([192,192], low);         /* first 8 bit of srcAddr */
+(217, 224) -> ([0,167], low);         /* second 8 bit of srcAddr */
+(225, 271) -> ([*], low);               /* est of the packet */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2048, 2048], low);       /* etherType is IPv4 */
+(112, 125) -> ([*], low);               /* rest of the packet up to ecn */
+(126, 127) -> ([*], low);              /* ecn */
+(128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
+(209, 216) -> ([192,192], low);         /* first 8 bit of srcAddr */
+(217, 224) -> ([169,255], low);         /* second 8 bit of srcAddr */
+(225, 271) -> ([*], low);               /* est of the packet */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2048, 2048], low);       /* etherType is IPv4 */
+(112, 125) -> ([*], low);               /* rest of the packet up to ecn */
+(126, 127) -> ([*], low);              /* ecn */
+(128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
+(209, 216) -> ([0,191], low);         /* first 8 bit of srcAddr */
+(217, 271) -> ([*], low);               /* est of the packet */
+
+|
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2048, 2048], low);       /* etherType is IPv4 */
+(112, 125) -> ([*], low);               /* rest of the packet up to ecn */
+(126, 127) -> ([*], low);              /* ecn */
+(128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
+(209, 216) -> ([193,255], low);         /* first 8 bit of srcAddr */
+(217, 271) -> ([*], low);               /* est of the packet */
