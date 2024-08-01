@@ -137,7 +137,7 @@ control MyCtrl() {
 
         if (ipv4_validity) {
             if ((hdr.ipv4.dstAddr[7:0] == 8w192) && (hdr.ipv4.dstAddr[15:8] == 8w168)) {
-            // if ((hdr.ipv4.dstAddr[7:0] == 8w10) && (hdr.ipv4.dstAddr[15:8] == 8w168)) {
+            // if ((hdr.ipv4.dstAddr[31:24] == 8w192) && (hdr.ipv4.dstAddr[15:8] == 8w168)) {
 				if (standard_metadata.enq_qdepth >= THRESHOLD) {
                     hdr.ipv4.ecn = 2w3;
                 }
