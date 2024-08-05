@@ -262,7 +262,8 @@ def refine_bigger(_lhs, _rhs, _gamma_g, _gamma_l):
             
             index = find_slice_index(_lhs, left_type)
 
-            new_min = right_type.get_slice(0).get_interval().get_max() + 1
+            tmp_min = right_type.get_slice(0).get_interval().get_max() + 1
+            new_min = tmp_min if tmp_min > left_type.get_slice(index).get_interval().get_min() else left_type.get_slice(index).get_interval().get_min()
             size = right_type.get_slice(0).get_interval().get_size()
             new_interval = INTERVAL.Interval(new_min, left_type.get_slice(index).get_interval().get_max(), size)
 
@@ -352,7 +353,8 @@ def refine_less(_lhs, _rhs, _gamma_g, _gamma_l):
                 
             index = find_slice_index(_lhs, left_type)
 
-            new_max = right_type.get_slice(0).get_interval().get_min() - 1
+            tmp_max = right_type.get_slice(0).get_interval().get_min() - 1
+            new_max = tmp_max if tmp_max < left_type.get_slice(index).get_interval().get_max() else left_type.get_slice(index).get_interval().get_max()
             size = right_type.get_slice(0).get_interval().get_size()
             new_interval = INTERVAL.Interval(left_type.get_slice(index).get_interval().get_min(), new_max, size)
 

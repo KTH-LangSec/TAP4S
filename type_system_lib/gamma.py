@@ -385,13 +385,13 @@ def refinement(_gamma_g, _gamma_l, _exp):
             return_Gamma.extend(refined_Gammas)
         else:
             if (_exp.get_op() == "&&"):
-                lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
+                lhs_Gamma = refinement(_gamma_g, _gamma_l, _exp.get_lhs())
                 for (gg, gl) in lhs_Gamma:
-                    refined_Gammas = T_EXP.refine_expression(_exp.get_rhs(), gg, gl)
+                    refined_Gammas = refinement(gg, gl, _exp.get_rhs())
                     return_Gamma.extend(refined_Gammas)
             elif (_exp.get_op() == "||"):
-                lhs_Gamma = T_EXP.refine_expression(_exp.get_lhs(), _gamma_g, _gamma_l)
-                rhs_Gamma = T_EXP.refine_expression(_exp.get_rhs(), _gamma_g, _gamma_l)
+                lhs_Gamma = refinement(_gamma_g, _gamma_l, _exp.get_lhs())
+                rhs_Gamma = refinement(_gamma_g, _gamma_l, _exp.get_rhs())
                 return_Gamma.extend(lhs_Gamma)
                 return_Gamma.extend(rhs_Gamma)
             else:
