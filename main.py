@@ -29,11 +29,15 @@ if __name__ == '__main__':
     arg_parser.add_argument('-d', action='store_true', help='Debug mode - print the security checks')
     arg_parser.add_argument('-g', action='store_true', help='Debug mode - print final Gamma')
     arg_parser.add_argument('-t', action='store_true', help='Print timing information')
+    arg_parser.add_argument('-w', action='store_true', help='Print warnings')
 
     args = arg_parser.parse_args()
 
     if args.d:
         setting.show_checks = True
+
+    if args.w:
+        setting.show_warnings = True
 
     if args.g:
         setting.show_Gamma = True
