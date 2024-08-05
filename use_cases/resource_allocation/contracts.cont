@@ -16,14 +16,14 @@ table application_resources:
 
 
 table ipv4_lpm_forward:
-        hdr.ipv4.dstAddr[7:0] == 8w198 ->                                        
+        hdr.ipv4.dstAddr[7:0] == 8w192 ->                                        
                 allocate_resources_using_subnet,
                 (
                     priority: < bs[3], { (0, 2) -> ([7,7], low) } >,
                     port: < bs[9], { (0, 8) -> ([1,511], low) } >   // any port other than 0
                 )
 
-        hdr.ipv4.dstAddr[7:0] != 8w198 ->                                             //otherwise
+        hdr.ipv4.dstAddr[7:0] != 8w192 ->                                             //otherwise
                 ipv4_forward, 
                 (
                     dstAddr : < bs[48], { (0, 47) -> ([*], low) } >

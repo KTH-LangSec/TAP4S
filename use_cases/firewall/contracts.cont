@@ -10,14 +10,14 @@ extern update_checksum:
 
 // Tables
 table ipv4_lpm:
-        hdr.ipv4.dstAddr[7:0] == 8w198 ->                                       // internal forward
+        hdr.ipv4.dstAddr[7:0] == 8w192 ->                                       // internal forward
             ipv4_forward,
             (
                 dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,             // any address
                 port: < bs[9], { (0, 8) -> ([1,3], low) } >                // ports 1-3
             )
 
-        hdr.ipv4.dstAddr[7:0] != 8w198 ->                                       // external forward
+        hdr.ipv4.dstAddr[7:0] != 8w192 ->                                       // external forward
             ipv4_forward,
             (
                 dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,             // any address

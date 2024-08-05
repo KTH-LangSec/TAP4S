@@ -11,14 +11,14 @@ extern update_checksum:
 
 // tables
 table ipv4_lpm:
-        hdr.ipv4.dstAddr[7:0] == 8w198 ->                                       // 198.*.*.*
+        hdr.ipv4.dstAddr[7:0] == 8w192 ->                                       // 192.*.*.*
             ipv4_forward,
             (
                 dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any mac address
                 port: < bs[9], { (0, 8) -> ([1,9], low) } >                     // ports 1-9
             )
 
-        hdr.ipv4.dstAddr[7:0] != 8w198 ->                                       //otherwise
+        hdr.ipv4.dstAddr[7:0] != 8w192 ->                                       //otherwise
             ipv4_forward,
             (
                 dstAddr: < bs[48], { (0, 47) -> ([*], low) } >,                 // any mac address
