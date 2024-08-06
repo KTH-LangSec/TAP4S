@@ -127,30 +127,44 @@ if __name__ == '__main__':
     final_Gamma = []
     for gamma_g_init_with_policy in Gamma_g_init:
         Gamma = TS.type_check_ast(main_ast, gamma_g_init_with_policy, GM.LocalGamma(), LATIICE.Low(), B_g, MP.Local_B() , C)
-        final_Gamma.extend(Gamma)
+        final_Gamma.append(Gamma)
 
     end_time_type_check = time.perf_counter() # timing
 
-    pruned_Gamma = GM.prune_invalid_gammas(final_Gamma)
-    Gamma_g = [gg for (gg, gl) in pruned_Gamma]
+    pruned_Gamma = GM.prune_invalid_gamma_lists(final_Gamma)
+    # Gamma_g = [gg for (gg, gl) in pruned_Gamma]
 
 
     ############ Print Final Gamma ##############
     if setting.show_Gamma:
         print()
-        for i, (gg, gl) in enumerate(pruned_Gamma):
-            print("########## Final gamma " + str(i+1) + ":")
-            print(gg)
+        for gamma_list in pruned_Gamma:
+            for i, (gg, gl) in enumerate(gamma_list):
+                print("########## Final gamma " + str(i+1) + ":")
+                print(gg)
 
     #############################################
     ############## Security Check ###############
     #############################################
+    performed_checks = 0
+    generated_gammas = 0
+    
     start_time_security_check = time.perf_counter() # timing
 
-    verdict, gammas, checks = SECURITY.check(Gamma_g, Gamma_o)
+    for gamma_list in pruned_Gamma:
+        Gamma_g = [gg for (gg, gl) in gamma_list]
+        verdict, gammas, checks = SECURITY.check(Gamma_g, Gamma_o)
 
-    LOGGER.print_blue("\n>>>>>> Generated Gammas: "+ str(len(pruned_Gamma)), end="")
-    LOGGER.print_blue("\n>>>>>> Performed Checks: "+ str(checks), end="")
+        performed_checks += checks
+        generated_gammas += len(Gamma_g)
+
+        if (not verdict):
+            break
+
+    end_time_security_check = time.perf_counter() # timing
+
+    LOGGER.print_blue("\n>>>>>> Generated Gammas: "+ str(generated_gammas), end="")
+    LOGGER.print_blue("\n>>>>>> Performed Checks: "+ str(performed_checks), end="")
     LOGGER.print_blue("\n>>>>>> Verdict: ", end="")
     if verdict:
         LOGGER.print_green("SECURE ✓")
@@ -160,8 +174,6 @@ if __name__ == '__main__':
         print("gamma_1:\n", gammas[0])
         print("gamma_2:\n", gammas[1])
         print("gamma_o:\n", gammas[2])
-
-    end_time_security_check = time.perf_counter() # timing
 
     ################## Timing ###################
     end_time_total = time.perf_counter()

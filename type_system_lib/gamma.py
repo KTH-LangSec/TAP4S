@@ -650,6 +650,14 @@ def is_type_below(_type_left, _type_right):
 ############################################################
 #################### Prune Invalid #########################
 ############################################################
+def prune_invalid_gamma_lists(_Gamma_list):
+    result_Gamma = []
+    for gamma_list in _Gamma_list:
+        result_Gamma.append(prune_invalid_gammas(gamma_list))
+
+    return result_Gamma
+
+
 def prune_invalid_gammas(_Gamma):
     result_Gamma = []
     for gamma in _Gamma:
