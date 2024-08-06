@@ -78,3 +78,27 @@ Ipacket:
 (128, 208) -> ([*], low);               /* rest of the packet up to srcAddr */
 (209, 216) -> ([193,255], low);         /* first 8 bit of srcAddr */
 (217, 271) -> ([*], low);               /* est of the packet */
+
+| 
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([0, 2047], low);       /* etherType is IPv4 */
+(112, 271) -> ([*], low);               /* rest of the packet */
+
+| 
+
+standard_metadata:
+(0, 8) -> ([*], low);                   /* egress_spec */
+(9, 27) -> ([*], high);                 /* enq_qdepth */
+
+Ipacket:
+(0, 47) -> ([*], low);                  /* dstAddr */
+(48, 95) -> ([*], low);                /* srcAddr */
+(96, 111) -> ([2049, 65535], low);       /* etherType is IPv4 */
+(112, 271) -> ([*], low);               /* rest of the packet */
