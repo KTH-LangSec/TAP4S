@@ -190,5 +190,7 @@ if __name__ == '__main__':
         print("{:<20} {:<10}".format("Total", round(execution_time_total, 2)))
         print("{:<20} {:<10}".format("Type Checking", round(execution_time_type_check, 2)))
         print("{:<20} {:<10}".format("Security Check", round(execution_time_security_check, 2)))
+        
+        print("\\footnotesize${}$ & \\footnotesize${}$ & \\footnotesize${}$ & \\footnotesize${}$".format(round(execution_time_total, 2), round(execution_time_type_check, 2), round(execution_time_security_check, 2), str(generated_gammas)))
 
 
